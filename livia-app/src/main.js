@@ -14,11 +14,11 @@ const AlbumArtFetcher = require('./album-art');
 // ============ Configuration ============
 const store = new Store({
   defaults: {
-    discordAppId: process.env.DISCORD_APP_ID || '1455603540654297212',
+    discordAppId: process.env.DISCORD_APP_ID || '',
     apiBaseUrl: process.env.API_BASE_URL || 'https://api.livia.mom',
     startWithSystem: false,
     showNotifications: true,
-    lastFmApiKey: process.env.LASTFM_API_KEY || 'd46e4b5b41f47257307e0852fefdd5b0',
+    lastFmApiKey: process.env.LASTFM_API_KEY || '',
     geminiApiKey: process.env.GEMINI_API_KEY || '',
     firstRun: true
   }

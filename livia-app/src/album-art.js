@@ -249,19 +249,314 @@ IMPORTANT: albumDescription should be 5-6 sentences about the album. artistBio s
   }
 
   /**
-   * Cover Art Archive
+   * Cover Art Archive - Enhanced with release-group support
+   * Strategy:
+   * 1. Search release-groups by artist + album (most accurate)
+   * 2. Search releases by artist + album (fallback)
+   * 3. Search release-groups by album only (broader search)
+   * 4. Search releases by album only (last resort)
    */
   async fetchFromCoverArtArchive(album, artist) {
     const userAgent = 'Livia/1.0.0 (https://livia.mom)';
     
     try {
-      // Search by album + artist first
-      console.log(`Searching for album + artist: "${album}" by "${artist}"`);
+      // 1. Try release-groups first (best for finding cover art)
+      console.log(`Searching release-groups for: "${album}" by "${artist}"`);
+      let releaseGroupIds = await this.searchMusicBrainzReleaseGroups(album, artist, userAgent);
+      if (releaseGroupIds?.length) {
+        const artUrl = await this.getCoverArtFromReleaseGroups(releaseGroupIds, userAgent);
+        if (artUrl) {
+          console.log('Found cover art via release-group');
+          return artUrl;
+        }
+      }
+      
+      // 2. Try releases by artist + album
+      console.log(`Searching releases for: "${album}" by "${artist}"`);
       let releaseIds = await this.searchMusicBrainzByAlbumAndArtist(album, artist, userAgent);
       if (releaseIds?.length) {
         const artUrl = await this.getCoverArtArchiveImage(releaseIds, userAgent);
         if (artUrl) return artUrl;
       }
+      
+      // 3. Try release-groups by album only
+      console.log(`Fallback: Searching release-groups for album only: "${album}"`);
+      releaseGroupIds = await this.searchMusicBrainzReleaseGroups(album, null, userAgent);
+      if (releaseGroupIds?.length) {
+        const artUrl = await this.getCoverArtFromReleaseGroups(releaseGroupIds, userAgent);
+        if (artUrl) return artUrl;
+      }
+      
+      // 4. Fallback: releases by album only
+      console.log(`Fallback: Searching releases for album only: "${album}"`);
+      releaseIds = await this.searchMusicBrainzByAlbum(album, userAgent);
+      if (releaseIds?.length) {
+        const artUrl = await this.getCoverArtArchiveImage(releaseIds, userAgent);
+        if (artUrl) return artUrl;
+      }
+      
+    } catch (e) {
+      console.log('Cover Art Archive error:', e.message);
+    }
+    return null;
+  }
+
+  /**
+   * Search MusicBrainz for release-groups (albums bundled across all editions)
+   */
+  async searchMusicBrainzReleaseGroups(album, artist, userAgent) {
+    try {
+      // Build query
+      let query = `releasegroup:"${album}"`;
+      if (artist) {
+        query += ` AND artist:"${artist}"`;
+      }
+      
+      const searchUrl = `https://musicbrainz.org/ws/2/release-group?query=${encodeURIComponent(query)}&limit=10&fmt=json`;
+      
+      const response = await fetch(searchUrl, {
+        timeout: 8000,
+        headers: { 'User-Agent': userAgent }
+      });
+
+      if (!response.ok) return null;
+      const data = await response.json();
+
+      if (!data['release-groups']?.length) return null;
+      
+      const albumLower = album.toLowerCase();
+      const artistLower = artist?.toLowerCase() || '';
+      
+      const scoredGroups = data['release-groups'].map(group => {
+        let score = group.score || 0;
+        const groupTitle = group.title?.toLowerCase() || '';
+        const groupArtist = group['artist-credit']?.[0]?.name?.toLowerCase() || '';
+        
+        // Title matching
+        if (groupTitle === albumLower) score += 100;
+        else if (groupTitle.includes(albumLower) || albumLower.includes(groupTitle)) score += 50;
+        
+        // Artist matching
+        if (artist) {
+          if (groupArtist === artistLower) score += 100;
+          else if (groupArtist.includes(artistLower) || artistLower.includes(groupArtist)) score += 50;
+        }
+        
+        // Prefer albums over singles/EPs
+        if (group['primary-type'] === 'Album') score += 30;
+        else if (group['primary-type'] === 'EP') score += 15;
+        
+        return { group, score };
+      });
+      
+      scoredGroups.sort((a, b) => b.score - a.score);
+      return scoredGroups.slice(0, 5).map(sg => sg.group.id);
+      
+    } catch (e) {
+      console.log('Release-group search error:', e.message);
+      return null;
+    }
+  }
+
+  /**
+   * Get cover art from release-groups
+   */
+  async getCoverArtFromReleaseGroups(releaseGroupIds, userAgent) {
+    if (!Array.isArray(releaseGroupIds)) {
+      releaseGroupIds = [releaseGroupIds];
+    }
+    
+    for (const groupId of releaseGroupIds) {
+      try {
+        // Cover Art Archive has a release-group endpoint
+        const apiUrl = `https://coverartarchive.org/release-group/${groupId}`;
+        const response = await fetch(apiUrl, {
+          timeout: 5000,
+          headers: { 
+            'User-Agent': userAgent,
+            'Accept': 'application/json'
+          }
+        });
+
+        if (!response.ok) continue;
+        
+        const data = await response.json();
+        
+        if (!data.images?.length) continue;
+        
+        // Prefer front cover
+        let frontImage = data.images.find(img => img.front === true);
+        if (!frontImage) {
+          frontImage = data.images.find(img => img.approved === true);
+        }
+        if (!frontImage) {
+          frontImage = data.images[0];
+        }
+        
+        if (!frontImage) continue;
+        
+        const thumbnails = frontImage.thumbnails || {};
+        const imageUrl = 
+          thumbnails['500'] ||
+          thumbnails['large'] ||
+          thumbnails['1200'] ||
+          thumbnails['250'] ||
+          frontImage.image;
+        
+        if (imageUrl) {
+          // Ensure HTTPS
+          return imageUrl.replace(/^http:\/\//, 'https://');
+        }
+        
+      } catch (e) {
+        continue;
+      }
+    }
+    
+    return null;
+  }
+
+  async searchMusicBrainzByAlbum(album, userAgent) {
+    try {
+      const query = `release:"${album}"`;
+      const searchUrl = `https://musicbrainz.org/ws/2/release?query=${encodeURIComponent(query)}&limit=10&fmt=json`;
+      
+      const response = await fetch(searchUrl, {
+        timeout: 8000,
+        headers: { 'User-Agent': userAgent }
+      });
+
+      if (!response.ok) return null;
+      const data = await response.json();
+
+      if (!data.releases?.length) return null;
+      
+      const albumLower = album.toLowerCase();
+      const scoredReleases = data.releases
+        .filter(release => {
+          const releaseTitle = release.title?.toLowerCase() || '';
+          return releaseTitle === albumLower || 
+                 releaseTitle.includes(albumLower) || 
+                 albumLower.includes(releaseTitle);
+        })
+        .map(release => {
+          let score = 0;
+          const releaseTitle = release.title?.toLowerCase() || '';
+          
+          if (releaseTitle === albumLower) score += 100;
+          else if (releaseTitle.includes(albumLower)) score += 70;
+          else if (albumLower.includes(releaseTitle)) score += 50;
+          
+          if (release.status === 'Official') score += 30;
+          if (release.date) score += 10;
+          if (release.country) score += 5;
+          if (release['track-count'] > 5) score += 10;
+          
+          return { release, score };
+        });
+      
+      scoredReleases.sort((a, b) => b.score - a.score);
+      return scoredReleases.slice(0, 5).map(sr => sr.release.id);
+      
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async searchMusicBrainzByAlbumAndArtist(album, artist, userAgent) {
+    try {
+      const query = `release:"${album}" AND artist:"${artist}"`;
+      const searchUrl = `https://musicbrainz.org/ws/2/release?query=${encodeURIComponent(query)}&limit=10&fmt=json`;
+      
+      const response = await fetch(searchUrl, {
+        timeout: 8000,
+        headers: { 'User-Agent': userAgent }
+      });
+
+      if (!response.ok) return null;
+      const data = await response.json();
+
+      if (!data.releases?.length) return null;
+      
+      const albumLower = album.toLowerCase();
+      const artistLower = artist.toLowerCase();
+      
+      const scoredReleases = data.releases.map(release => {
+        let score = 0;
+        const releaseTitle = release.title?.toLowerCase() || '';
+        const releaseArtist = release['artist-credit']?.[0]?.name?.toLowerCase() || '';
+        
+        if (releaseTitle === albumLower) score += 100;
+        else if (releaseTitle.includes(albumLower) || albumLower.includes(releaseTitle)) score += 50;
+        
+        if (releaseArtist === artistLower) score += 100;
+        else if (releaseArtist.includes(artistLower) || artistLower.includes(releaseArtist)) score += 50;
+        
+        if (release.status === 'Official') score += 20;
+        
+        return { release, score };
+      });
+      
+      scoredReleases.sort((a, b) => b.score - a.score);
+      return scoredReleases.slice(0, 5).map(sr => sr.release.id);
+      
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async getCoverArtArchiveImage(releaseIds, userAgent) {
+    if (!Array.isArray(releaseIds)) {
+      releaseIds = [releaseIds];
+    }
+    
+    for (const releaseId of releaseIds) {
+      try {
+        const apiUrl = `https://coverartarchive.org/release/${releaseId}`;
+        const response = await fetch(apiUrl, {
+          timeout: 5000,
+          headers: { 
+            'User-Agent': userAgent,
+            'Accept': 'application/json'
+          }
+        });
+
+        if (!response.ok) continue;
+        
+        const data = await response.json();
+        
+        if (!data.images?.length) continue;
+        
+        let frontImage = data.images.find(img => img.front === true);
+        if (!frontImage) {
+          frontImage = data.images.find(img => img.approved === true);
+        }
+        if (!frontImage) {
+          frontImage = data.images[0];
+        }
+        
+        if (!frontImage) continue;
+        
+        const thumbnails = frontImage.thumbnails || {};
+        const imageUrl = 
+          thumbnails['500'] ||
+          thumbnails['large'] ||
+          thumbnails['1200'] ||
+          thumbnails['250'] ||
+          frontImage.image;
+        
+        if (imageUrl) {
+          // Ensure HTTPS
+          return imageUrl.replace(/^http:\/\//, 'https://');
+        }
+        
+      } catch (e) {
+        continue;
+      }
+    }
+    
+    return null;
+  }
       
       // Fallback: album only
       console.log(`Fallback: Searching for album only: "${album}"`);

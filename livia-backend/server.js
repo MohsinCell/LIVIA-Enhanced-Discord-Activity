@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
+const fetch = require("node-fetch");
 const app = express();
 
 app.use(cors());
@@ -222,7 +223,8 @@ app.post("/session", (req, res) => {
     label,
     trackCount,
     albumDescription,
-    artistBio
+    artistBio,
+    artistImage
   } = req.body;
 
   // Validate required fields
@@ -449,7 +451,8 @@ app.get("/session/:id", (req, res) => {
     label: session.label || null,
     trackCount: session.trackCount || null,
     albumDescription: session.albumDescription || null,
-    artistBio: session.artistBio || null
+    artistBio: session.artistBio || null,
+    artistImage: session.artistImage || null
   });
 });
 
@@ -529,6 +532,33 @@ app.get("/sessions/user/:userId", (req, res) => {
     userId: userId,
     sessions: userSessions
   });
+});
+
+// ========== LAST.FM PROXY ==========
+// This proxies Last.fm API calls so the API key isn't exposed in frontend
+const LASTFM_API_KEY = process.env.LASTFM_API_KEY || '';
+
+// Proxy for artist.getinfo
+app.get("/lastfm/artist", async (req, res) => {
+  const { artist } = req.query;
+  
+  if (!artist) {
+    return res.status(400).json({ error: "Missing artist parameter" });
+  }
+  
+  if (!LASTFM_API_KEY) {
+    return res.status(500).json({ error: "Last.fm API key not configured" });
+  }
+  
+  try {
+    const url = `https://ws.audioscrobbler.com/2.0/?method=artist.getinfo&artist=${encodeURIComponent(artist)}&api_key=${LASTFM_API_KEY}&format=json`;
+    const response = await fetch(url);
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    console.error("Last.fm proxy error:", error.message);
+    res.status(500).json({ error: "Failed to fetch from Last.fm" });
+  }
 });
 
 // HEALTH CHECK

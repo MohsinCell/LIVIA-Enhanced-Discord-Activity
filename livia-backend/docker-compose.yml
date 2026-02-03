@@ -10,6 +10,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=4000
+      - LASTFM_API_KEY=${LASTFM_API_KEY}
     volumes:
       # Persist history data
       - ./data:/app/data

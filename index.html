@@ -3953,9 +3953,8 @@
         let lastfmUrl = null;
 
         try {
-          // Last.fm API key for Livia
-          const lastfmApiKey = 'd46e4b5b41f47257307e0852fefdd5b0';
-          const lastfmUrl_api = `https://ws.audioscrobbler.com/2.0/?method=artist.getinfo&artist=${encodeURIComponent(cleanedArtist)}&api_key=${lastfmApiKey}&format=json`;
+          // Use backend proxy to avoid exposing API key
+          const lastfmUrl_api = `${API_BASE}/lastfm/artist?artist=${encodeURIComponent(cleanedArtist)}`;
 
           console.log(`🔍 Fetching Last.fm artist info for: ${cleanedArtist}`);
 
