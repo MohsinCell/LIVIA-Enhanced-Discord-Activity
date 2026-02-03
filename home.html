@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Livia</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description" content="Display your music activity on Discord with beautiful lyrics and album art." />
+  <link rel="icon" type="image/svg+xml" href="/livia-logo.svg" />
+
+  <style>
+    :root {
+      --brown-50: #fdf8f6;
+      --brown-100: #f2e8e5;
+      --brown-200: #eaddd7;
+      --brown-300: #e0cec7;
+      --brown-400: #d2bab0;
+      --brown-500: #bfa094;
+      --brown-600: #a18072;
+      --brown-700: #977669;
+      --brown-800: #846358;
+      --brown-900: #43302b;
+      --gold: #c9a962;
+      --gold-light: #d4bc7c;
+      --gold-dark: #a68b4b;
+      --glass-bg: rgba(255, 255, 255, 0.03);
+      --glass-border: rgba(255, 255, 255, 0.06);
+      --glass-bg-hover: rgba(255, 255, 255, 0.06);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      min-height: 100dvh;
+      background: #0a0908;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Background */
+    .bg {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(67, 48, 43, 0.4) 0%, transparent 50%),
+                  radial-gradient(ellipse 60% 40% at 100% 100%, rgba(67, 48, 43, 0.2) 0%, transparent 40%),
+                  #0a0908;
+    }
+
+    .bg::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+    }
+
+    /* Navigation */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 16px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(10, 9, 8, 0.7);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--glass-border);
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: #fff;
+    }
+
+    .nav-logo img {
+      height: 32px;
+      width: auto;
+    }
+
+    .nav-logo span {
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+      color: var(--brown-100);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 40px;
+      align-items: center;
+    }
+
+    .nav-links a {
+      color: var(--brown-300);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0.2px;
+    }
+
+    .nav-links a:hover {
+      color: var(--brown-100);
+    }
+
+    .nav-cta {
+      padding: 10px 20px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--glass-border);
+      border-radius: 8px;
+      color: var(--gold) !important;
+    }
+
+    .nav-cta:hover {
+      background: var(--glass-bg-hover);
+    }
+
+    /* Mobile menu */
+    .menu-toggle {
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      gap: 5px;
+      width: 32px;
+      height: 32px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    .menu-toggle span {
+      display: block;
+      width: 100%;
+      height: 2px;
+      background: var(--brown-300);
+      border-radius: 2px;
+      transition: transform 0.3s, opacity 0.3s;
+    }
+
+    .menu-toggle.active span:nth-child(1) {
+      transform: translateY(7px) rotate(45deg);
+    }
+
+    .menu-toggle.active span:nth-child(2) {
+      opacity: 0;
+    }
+
+    .menu-toggle.active span:nth-child(3) {
+      transform: translateY(-7px) rotate(-45deg);
+    }
+
+    .mobile-menu {
+      display: none;
+      position: fixed;
+      top: 65px;
+      left: 0;
+      right: 0;
+      background: rgba(10, 9, 8, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--glass-border);
+      padding: 24px;
+      flex-direction: column;
+      gap: 16px;
+      z-index: 99;
+    }
+
+    .mobile-menu.active {
+      display: flex;
+    }
+
+    .mobile-menu a {
+      color: var(--brown-300);
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 500;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--glass-border);
+    }
+
+    .mobile-menu a:last-child {
+      border-bottom: none;
+      color: var(--gold);
+    }
+
+    /* Hero */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 120px 60px 80px;
+      gap: 80px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .hero-content {
+      flex: 1;
+      max-width: 520px;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--glass-border);
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--brown-300);
+      margin-bottom: 28px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .hero-badge svg {
+      width: 14px;
+      height: 14px;
+      color: var(--gold);
+    }
+
+    .hero h1 {
+      font-size: clamp(40px, 5vw, 64px);
+      font-weight: 600;
+      letter-spacing: -1.5px;
+      line-height: 1.1;
+      margin-bottom: 20px;
+      color: var(--brown-100);
+    }
+
+    .hero h1 span {
+      color: var(--gold);
+    }
+
+    .hero p {
+      font-size: 17px;
+      color: var(--brown-400);
+      line-height: 1.7;
+      margin-bottom: 36px;
+      font-weight: 400;
+    }
+
+    .hero-buttons {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 28px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      letter-spacing: 0.2px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+      color: #0a0908;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 100%);
+    }
+
+    .btn-secondary {
+      background: var(--glass-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      color: var(--brown-200);
+      border: 1px solid var(--glass-border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--glass-bg-hover);
+    }
+
+    .btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* Preview Card */
+    .hero-preview {
+      flex: 1;
+      max-width: 420px;
+    }
+
+    .preview-window {
+      background: var(--glass-bg);
+      backdrop-filter: blur(40px);
+      -webkit-backdrop-filter: blur(40px);
+      border-radius: 16px;
+      border: 1px solid var(--glass-border);
+      overflow: hidden;
+    }
+
+    .preview-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 18px;
+      background: rgba(0, 0, 0, 0.2);
+      border-bottom: 1px solid var(--glass-border);
+    }
+
+    .preview-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--brown-700);
+    }
+
+    .preview-content {
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .preview-album {
+      width: 200px;
+      height: 200px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--brown-900), #1a1412);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .preview-album svg {
+      width: 64px;
+      height: 64px;
+      color: var(--brown-600);
+    }
+
+    .preview-info {
+      text-align: center;
+      width: 100%;
+    }
+
+    .preview-song {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--brown-100);
+    }
+
+    .preview-artist {
+      font-size: 14px;
+      color: var(--brown-400);
+      margin-bottom: 24px;
+    }
+
+    .preview-progress {
+      width: 100%;
+      margin-bottom: 20px;
+    }
+
+    .preview-progress-bar {
+      height: 3px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .preview-progress-fill {
+      height: 100%;
+      width: 35%;
+      background: var(--gold);
+      border-radius: 2px;
+    }
+
+    .preview-time {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--brown-500);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .preview-lyrics {
+      width: 100%;
+    }
+
+    .preview-lyric {
+      font-size: 14px;
+      line-height: 2;
+      color: var(--brown-600);
+      text-align: center;
+    }
+
+    .preview-lyric.active {
+      color: var(--brown-100);
+      font-weight: 500;
+    }
+
+    /* Features */
+    .features {
+      padding: 120px 40px 80px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .section-header h2 {
+      font-size: clamp(24px, 4vw, 36px);
+      font-weight: 600;
+      letter-spacing: -0.5px;
+      margin-bottom: 10px;
+      color: var(--brown-100);
+    }
+
+    .section-header p {
+      font-size: clamp(13px, 2vw, 15px);
+      color: var(--brown-500);
+      max-width: 400px;
+      margin: 0 auto;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .feature-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 14px;
+      padding: 28px;
+    }
+
+    .feature-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      background: rgba(201, 169, 98, 0.1);
+      border: 1px solid rgba(201, 169, 98, 0.15);
+    }
+
+    .feature-icon svg {
+      width: 20px;
+      height: 20px;
+      color: var(--gold);
+    }
+
+    .feature-card h3 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--brown-100);
+    }
+
+    .feature-card p {
+      font-size: 13px;
+      color: var(--brown-500);
+      line-height: 1.6;
+    }
+
+    /* Apps */
+    .apps {
+      padding: 140px 40px 60px;
+    }
+
+    .apps-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    .app-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 18px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--glass-border);
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--brown-300);
+    }
+
+    .app-badge svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .app-badge.spotify svg { color: #1DB954; }
+    .app-badge.apple svg { color: #fc3c44; }
+    .app-badge.youtube svg { color: #ff0000; }
+    .app-badge.tidal svg { color: #fff; }
+
+    /* Steps */
+    .steps-section {
+      padding: 140px 40px 80px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .step {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      padding: 24px;
+    }
+
+    .step-number {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: rgba(201, 169, 98, 0.1);
+      border: 1px solid rgba(201, 169, 98, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--gold);
+      flex-shrink: 0;
+    }
+
+    .step-content h3 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: var(--brown-100);
+    }
+
+    .step-content p {
+      font-size: 13px;
+      color: var(--brown-500);
+      line-height: 1.5;
+    }
+
+    /* Download */
+    .download {
+      padding: 80px 40px;
+    }
+
+    .download-card {
+      max-width: 650px;
+      margin: 0 auto;
+      background: var(--glass-bg);
+      backdrop-filter: blur(40px);
+      -webkit-backdrop-filter: blur(40px);
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      padding: 48px 40px;
+      text-align: center;
+    }
+
+    .download-card h2 {
+      font-size: clamp(22px, 3vw, 28px);
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: var(--brown-100);
+    }
+
+    .download-card > p {
+      font-size: 14px;
+      color: var(--brown-500);
+      margin-bottom: 32px;
+    }
+
+    .download-buttons {
+      display: flex;
+      gap: 14px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .download-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 20px 28px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--glass-border);
+      border-radius: 14px;
+      text-decoration: none;
+      min-width: 150px;
+      position: relative;
+    }
+
+    .download-btn:hover {
+      background: var(--glass-bg-hover);
+    }
+
+    .download-btn.primary {
+      background: linear-gradient(135deg, rgba(201, 169, 98, 0.15) 0%, rgba(201, 169, 98, 0.05) 100%);
+      border-color: rgba(201, 169, 98, 0.2);
+    }
+
+    .download-btn.primary:hover {
+      background: linear-gradient(135deg, rgba(201, 169, 98, 0.2) 0%, rgba(201, 169, 98, 0.1) 100%);
+    }
+
+    .download-btn svg {
+      width: 28px;
+      height: 28px;
+      color: var(--brown-200);
+    }
+
+    .download-btn.primary svg {
+      color: var(--gold);
+    }
+
+    .download-btn-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .download-btn-label {
+      font-size: 10px;
+      color: var(--brown-500);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .download-btn-platform {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--brown-100);
+    }
+
+    .download-btn.primary .download-btn-platform {
+      color: var(--gold);
+    }
+
+    .coming-soon-badge {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: var(--brown-700);
+      color: var(--brown-100);
+      font-size: 9px;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .download-info {
+      margin-top: 28px;
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .download-info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      text-align: center;
+    }
+
+    .download-info-label {
+      font-size: 10px;
+      color: var(--brown-600);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .download-info-value {
+      font-size: 12px;
+      color: var(--brown-400);
+      font-weight: 500;
+    }
+
+    /* Footer */
+    footer {
+      padding: 20px 40px;
+      text-align: center;
+      border-top: 1px solid var(--glass-border);
+    }
+
+    .footer-content {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-size: 13px;
+      color: var(--brown-500);
+      opacity: 0.6;
+    }
+
+    .footer-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .footer-item svg {
+      width: 14px;
+      height: 14px;
+      opacity: 0.7;
+    }
+
+    .footer-separator {
+      opacity: 0.3;
+      font-weight: 700;
+    }
+
+    .footer-item img {
+      height: 14px;
+      width: auto;
+    }
+
+    /* Responsive - Tablet */
+    @media (max-width: 1024px) {
+      .hero {
+        flex-direction: column;
+        text-align: center;
+        gap: 50px;
+        padding: 120px 40px 80px;
+      }
+
+      .hero-content {
+        max-width: 100%;
+      }
+
+      .hero-buttons {
+        justify-content: center;
+      }
+
+      .hero-preview {
+        max-width: 360px;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .features-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    /* Responsive - Mobile */
+    @media (max-width: 768px) {
+      nav {
+        padding: 14px 20px;
+      }
+
+      .nav-links {
+        display: none;
+      }
+
+      .menu-toggle {
+        display: flex;
+      }
+
+      .hero {
+        padding: 100px 20px 60px;
+        min-height: auto;
+        gap: 40px;
+      }
+
+      .hero-badge {
+        margin-bottom: 20px;
+        font-size: 10px;
+        padding: 6px 12px;
+      }
+
+      .hero h1 {
+        margin-bottom: 16px;
+        font-size: 36px;
+      }
+
+      .hero p {
+        margin-bottom: 28px;
+        font-size: 15px;
+      }
+
+      .hero-buttons {
+        flex-direction: column;
+        width: 100%;
+        max-width: 280px;
+        margin: 0 auto;
+      }
+
+      .btn {
+        width: 100%;
+        justify-content: center;
+        padding: 14px 24px;
+      }
+
+      .hero-preview {
+        max-width: 320px;
+        width: 100%;
+      }
+
+      .preview-window {
+        border-radius: 14px;
+      }
+
+      .preview-header {
+        padding: 12px 16px;
+      }
+
+      .preview-dot {
+        width: 8px;
+        height: 8px;
+      }
+
+      .preview-content {
+        padding: 24px 20px;
+      }
+
+      .preview-album {
+        width: 160px;
+        height: 160px;
+        margin-bottom: 20px;
+      }
+
+      .preview-album svg {
+        width: 52px;
+        height: 52px;
+      }
+
+      .preview-song {
+        font-size: 16px;
+      }
+
+      .preview-artist {
+        font-size: 13px;
+        margin-bottom: 20px;
+      }
+
+      .preview-lyric {
+        font-size: 13px;
+      }
+
+      .features {
+        padding: 60px 20px;
+      }
+
+      .section-header {
+        margin-bottom: 32px;
+      }
+
+      .features-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .feature-card {
+        padding: 22px;
+        border-radius: 12px;
+      }
+
+      .feature-icon {
+        width: 38px;
+        height: 38px;
+        margin-bottom: 14px;
+      }
+
+      .apps {
+        padding: 40px 20px;
+      }
+
+      .apps-grid {
+        gap: 8px;
+      }
+
+      .app-badge {
+        padding: 10px 14px;
+        font-size: 12px;
+        border-radius: 8px;
+      }
+
+      .app-badge svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      .steps-section {
+        padding: 60px 20px;
+      }
+
+      .steps {
+        gap: 12px;
+      }
+
+      .step {
+        flex-direction: column;
+        text-align: center;
+        align-items: center;
+        padding: 20px;
+        gap: 12px;
+        border-radius: 12px;
+      }
+
+      .step-number {
+        width: 32px;
+        height: 32px;
+        font-size: 13px;
+      }
+
+      .download {
+        padding: 60px 20px;
+      }
+
+      .download-card {
+        padding: 32px 20px;
+        border-radius: 16px;
+      }
+
+      .download-buttons {
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .download-btn {
+        width: 100%;
+        flex-direction: row;
+        justify-content: flex-start;
+        padding: 18px 20px;
+        gap: 14px;
+      }
+
+      .download-btn-text {
+        align-items: flex-start;
+      }
+
+      .coming-soon-badge {
+        top: 50%;
+        transform: translateY(-50%);
+        right: 16px;
+      }
+
+      .download-info {
+        gap: 16px;
+      }
+
+      footer {
+        padding: 24px 20px;
+      }
+
+      .footer-links {
+        gap: 20px;
+      }
+    }
+
+    /* Responsive - Small Mobile */
+    @media (max-width: 380px) {
+      nav {
+        padding: 12px 16px;
+      }
+
+      .nav-logo img {
+        height: 28px;
+      }
+
+      .nav-logo span {
+        font-size: 18px;
+      }
+
+      .hero {
+        padding: 90px 16px 50px;
+      }
+
+      .hero h1 {
+        font-size: 32px;
+      }
+
+      .hero-buttons {
+        max-width: 100%;
+      }
+
+      .preview-content {
+        padding: 20px 16px;
+      }
+
+      .preview-album {
+        width: 140px;
+        height: 140px;
+      }
+
+      .feature-card {
+        padding: 18px;
+      }
+
+      .step {
+        padding: 18px;
+      }
+
+      .download-card {
+        padding: 28px 16px;
+      }
+
+      .download-btn {
+        padding: 16px;
+      }
+
+      .download-btn svg {
+        width: 24px;
+        height: 24px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bg"></div>
+
+  <nav>
+    <a href="/" class="nav-logo">
+      <img src="/livia-logo.svg" alt="Livia">
+      <span>Livia</span>
+    </a>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#how-it-works">How it works</a>
+      <a href="#download" class="nav-cta">Download</a>
+    </div>
+    <button class="menu-toggle" onclick="toggleMenu()" aria-label="Menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+  </nav>
+
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="#features" onclick="closeMenu()">Features</a>
+    <a href="#how-it-works" onclick="closeMenu()">How it works</a>
+    <a href="#download" onclick="closeMenu()">Download</a>
+  </div>
+
+  <section class="hero">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
+          <path d="M9 12l2 2 4-4"/>
+        </svg>
+        Free & Open Source
+      </div>
+      
+      <h1>Share your music<br>on <span>Discord</span></h1>
+      
+      <p>Display what you're listening to with real-time lyrics, album art, and a live session page your friends can visit.</p>
+      
+      <div class="hero-buttons">
+        <a href="#download" class="btn btn-primary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Download
+        </a>
+        <a href="https://github.com/livia-app" target="_blank" class="btn btn-secondary">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+          </svg>
+          GitHub
+        </a>
+      </div>
+    </div>
+
+    <div class="hero-preview">
+      <div class="preview-window">
+        <div class="preview-header">
+          <div class="preview-dot"></div>
+          <div class="preview-dot"></div>
+          <div class="preview-dot"></div>
+        </div>
+        <div class="preview-content">
+          <div class="preview-album">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="12" cy="12" r="10"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </div>
+          <div class="preview-info">
+            <div class="preview-song">Sugar</div>
+            <div class="preview-artist">Maroon 5</div>
+            <div class="preview-progress">
+              <div class="preview-progress-bar">
+                <div class="preview-progress-fill"></div>
+              </div>
+              <div class="preview-time">
+                <span>1:42</span>
+                <span>3:55</span>
+              </div>
+            </div>
+            <div class="preview-lyrics">
+              <div class="preview-lyric">Your sugar, yes please</div>
+              <div class="preview-lyric active">Won't you come and put it down on me</div>
+              <div class="preview-lyric">I'm right here, 'cause I need</div>
+              <div class="preview-lyric">Little love, a little sympathy</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="features" id="features">
+    <div class="section-header">
+      <h2>Features</h2>
+      <p>Everything you need to share your music</p>
+    </div>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 18V5l12-2v13"/>
+            <circle cx="6" cy="18" r="3"/>
+            <circle cx="18" cy="16" r="3"/>
+          </svg>
+        </div>
+        <h3>Live Lyrics</h3>
+        <p>Real-time synced lyrics that scroll as you listen. Your friends can follow along.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <path d="M21 15l-5-5L5 21"/>
+          </svg>
+        </div>
+        <h3>Album Art</h3>
+        <p>High-resolution artwork displayed on Discord and your personal session page.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+          </svg>
+        </div>
+        <h3>Shareable Link</h3>
+        <p>Get a unique session link anyone can visit to see what you're playing live.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        <h3>Privacy First</h3>
+        <p>Only shares what you're currently playing. No tracking, no accounts required.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </div>
+        <h3>Auto-Start</h3>
+        <p>Set it once and forget it. Runs silently in your system tray.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="3" width="20" height="14" rx="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+        </div>
+        <h3>Cross-Platform</h3>
+        <p>Works on Windows and macOS with any music app that uses system media controls.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="apps">
+    <div class="section-header">
+      <h2>Supported Apps</h2>
+      <p>Automatically detects music from these apps and more</p>
+    </div>
+
+    <div class="apps-grid">
+      <div class="app-badge spotify">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+        Spotify
+      </div>
+      <div class="app-badge apple">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+        Apple Music
+      </div>
+      <div class="app-badge youtube">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+        YouTube Music
+      </div>
+      <div class="app-badge tidal">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.012 3.992L8.008 7.996 4.004 3.992 0 7.996 4.004 12l4.004-4.004L12.012 12l-4.004 4.004 4.004 4.004 4.004-4.004L12.012 12l4.004-4.004-4.004-4.004zm7.992 0l-4.004 4.004 4.004 4.004 4.004-4.004-4.004-4.004z"/></svg>
+        TIDAL
+      </div>
+    </div>
+  </section>
+
+  <section class="steps-section" id="how-it-works">
+    <div class="section-header">
+      <h2>How it works</h2>
+      <p>Get started in under a minute</p>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-number">1</div>
+        <div class="step-content">
+          <h3>Download & Install</h3>
+          <p>Download Livia and run the installer. No configuration needed.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-number">2</div>
+        <div class="step-content">
+          <h3>Open Discord</h3>
+          <p>Make sure Discord desktop is running. Livia connects automatically.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-number">3</div>
+        <div class="step-content">
+          <h3>Play Music</h3>
+          <p>Start playing music in any supported app. Your friends will see what you're listening to.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="download" id="download">
+    <div class="download-card">
+      <h2>Download Livia</h2>
+      <p>Free, lightweight, and takes seconds to set up.</p>
+
+      <div class="download-buttons">
+        <a href="/Livia-1.0.0-win-x64.exe" class="download-btn primary">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg>
+          <div class="download-btn-text">
+            <span class="download-btn-label">Download for</span>
+            <span class="download-btn-platform">Windows</span>
+          </div>
+        </a>
+        <a href="#" class="download-btn" onclick="return false;">
+          <span class="coming-soon-badge">Coming Soon</span>
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          <div class="download-btn-text">
+            <span class="download-btn-label">Download for</span>
+            <span class="download-btn-platform">macOS</span>
+          </div>
+        </a>
+      </div>
+
+      <div class="download-info">
+        <div class="download-info-item">
+          <span class="download-info-label">Version</span>
+          <span class="download-info-value">1.0.0</span>
+        </div>
+        <div class="download-info-item">
+          <span class="download-info-label">Size</span>
+          <span class="download-info-value">74 MB</span>
+        </div>
+        <div class="download-info-item">
+          <span class="download-info-label">Requires</span>
+          <span class="download-info-value">Windows 10+</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="footer-content">
+      <div class="footer-item">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6m2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0m4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4m-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10s-3.516.68-4.168 1.332c-.678.678-.83 1.418-.832 1.664z"/>
+        </svg>
+        <span>Logo designed by Danisha</span>
+      </div>
+      <div class="footer-separator">|</div>
+      <div class="footer-item">
+        <img src="/livia-logo.svg" alt="Livia">
+        <span>Livia - an enhanced Discord web activity status</span>
+      </div>
+      <div class="footer-separator">|</div>
+      <div class="footer-item">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M10.478 1.647a.5.5 0 1 0-.956-.294l-4 13a.5.5 0 0 0 .956.294zM4.854 4.146a.5.5 0 0 1 0 .708L1.707 8l3.147 3.146a.5.5 0 0 1-.708.708l-3.5-3.5a.5.5 0 0 1 0-.708l3.5-3.5a.5.5 0 0 1 .708 0m6.292 0a.5.5 0 0 0 0 .708L14.293 8l-3.147 3.146a.5.5 0 0 0 .708.708l3.5-3.5a.5.5 0 0 0 0-.708l-3.5-3.5a.5.5 0 0 0-.708 0"/>
+        </svg>
+        <span>Developed by Mohsin</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Smooth scroll for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+
+    // Mobile menu
+    function toggleMenu() {
+      const toggle = document.querySelector('.menu-toggle');
+      const menu = document.getElementById('mobileMenu');
+      toggle.classList.toggle('active');
+      menu.classList.toggle('active');
+    }
+
+    function closeMenu() {
+      const toggle = document.querySelector('.menu-toggle');
+      const menu = document.getElementById('mobileMenu');
+      toggle.classList.remove('active');
+      menu.classList.remove('active');
+    }
+
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 768) {
+        closeMenu();
+      }
+    });
+
+    // Simple lyrics animation
+    const lyrics = document.querySelectorAll('.preview-lyric');
+    let currentLyric = 1;
+    setInterval(() => {
+      lyrics.forEach(l => l.classList.remove('active'));
+      lyrics[currentLyric].classList.add('active');
+      currentLyric = (currentLyric + 1) % lyrics.length;
+    }, 2500);
+  </script>
+</body>
+
+</html>

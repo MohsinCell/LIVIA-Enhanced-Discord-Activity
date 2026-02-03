@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <UseWindowsDesktopSDK>true</UseWindowsDesktopSDK>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    
+    <!-- Application Info -->
+    <AssemblyName>Livia</AssemblyName>
+    <RootNamespace>Livia</RootNamespace>
+    <Product>Livia</Product>
+    <AssemblyTitle>Livia - Music Activity Display</AssemblyTitle>
+    <Description>Display your music activity on Discord with beautiful lyrics and album art</Description>
+    <Company>Livia</Company>
+    <Copyright>Copyright © 2024 Livia</Copyright>
+    <Version>1.0.0</Version>
+    <FileVersion>1.0.0.0</FileVersion>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    
+    <!-- Application Icon (uncomment if you have livia.ico) -->
+    <!-- <ApplicationIcon>livia.ico</ApplicationIcon> -->
+    
+    <!-- Publishing Settings for Single-File Executable -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    
+    <!-- Trim unused code for smaller executable -->
+    <PublishTrimmed>false</PublishTrimmed>
+    
+    <!-- Ready to Run for faster startup -->
+    <PublishReadyToRun>true</PublishReadyToRun>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DiscordRichPresence" Version="1.6.1.70" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+  </ItemGroup>
+  
+  <!-- Include icon in output (if exists) -->
+  <ItemGroup Condition="Exists('livia.ico')">
+    <None Update="livia.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,5402 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Livia</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="icon" type="image/svg+xml" href="/livia-logo.svg" />
+  <link rel="shortcut icon" type="image/svg+xml" href="/livia-logo.svg" />
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100dvh;
+      background: #000;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+        sans-serif;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      position: relative;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Apple Music-style dynamic background container */
+    #bg {
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      background: #000;
+      overflow: hidden;
+    }
+
+    /* Primary album art layer - scaled up and blurred */
+    #bg-artwork-primary {
+      position: absolute;
+      inset: -50%;
+      width: 200%;
+      height: 200%;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      filter: blur(80px) saturate(1.8) brightness(0.6);
+      transform: scale(1.1);
+      opacity: 0;
+      transition: opacity 1.5s ease, background-image 0s;
+      animation: bg-drift 25s ease-in-out infinite;
+    }
+
+    #bg-artwork-primary.loaded {
+      opacity: 1;
+    }
+
+    /* Secondary layer for color depth - offset position */
+    #bg-artwork-secondary {
+      position: absolute;
+      inset: -80%;
+      width: 260%;
+      height: 260%;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      filter: blur(120px) saturate(2) brightness(0.4);
+      transform: rotate(45deg);
+      opacity: 0;
+      transition: opacity 2s ease 0.3s;
+      animation: bg-drift-reverse 30s ease-in-out infinite;
+    }
+
+    #bg-artwork-secondary.loaded {
+      opacity: 0.7;
+    }
+
+    /* Third layer - subtle color accent */
+    #bg-artwork-tertiary {
+      position: absolute;
+      inset: -30%;
+      width: 160%;
+      height: 160%;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      filter: blur(150px) saturate(2.5) brightness(0.5) hue-rotate(15deg);
+      transform: scale(1.2) rotate(-20deg);
+      opacity: 0;
+      transition: opacity 2.5s ease 0.5s;
+      animation: bg-pulse 20s ease-in-out infinite;
+    }
+
+    #bg-artwork-tertiary.loaded {
+      opacity: 0.5;
+    }
+
+    /* Subtle movement animations */
+    @keyframes bg-drift {
+
+      0%,
+      100% {
+        transform: scale(1.1) translate(0, 0);
+      }
+
+      25% {
+        transform: scale(1.15) translate(2%, 1%);
+      }
+
+      50% {
+        transform: scale(1.1) translate(-1%, 2%);
+      }
+
+      75% {
+        transform: scale(1.12) translate(1%, -1%);
+      }
+    }
+
+    @keyframes bg-drift-reverse {
+
+      0%,
+      100% {
+        transform: rotate(45deg) translate(0, 0);
+      }
+
+      33% {
+        transform: rotate(47deg) translate(-2%, 1%);
+      }
+
+      66% {
+        transform: rotate(43deg) translate(1%, -2%);
+      }
+    }
+
+    @keyframes bg-pulse {
+
+      0%,
+      100% {
+        opacity: 0.5;
+        filter: blur(150px) saturate(2.5) brightness(0.5) hue-rotate(15deg);
+      }
+
+      50% {
+        opacity: 0.6;
+        filter: blur(150px) saturate(2.8) brightness(0.55) hue-rotate(20deg);
+      }
+    }
+
+    /* Vignette overlay for depth */
+    #bg::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 80% at 50% 50%,
+          transparent 0%,
+          rgba(0, 0, 0, 0.2) 50%,
+          rgba(0, 0, 0, 0.6) 100%);
+      z-index: 4;
+      pointer-events: none;
+    }
+
+    /* Subtle noise texture for authentic feel */
+    #bg::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/></filter><rect width='300' height='300' filter='url(%23n)' opacity='0.035'/></svg>");
+      z-index: 5;
+      pointer-events: none;
+      opacity: 0.8;
+    }
+
+    /* Dark overlay for text readability */
+    #bg-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg,
+          rgba(0, 0, 0, 0.3) 0%,
+          rgba(0, 0, 0, 0.1) 30%,
+          rgba(0, 0, 0, 0.1) 70%,
+          rgba(0, 0, 0, 0.4) 100%);
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    /* ========== SKELETON LOADER STYLES ========== */
+    .skeleton {
+      background: linear-gradient(90deg,
+          rgba(255, 255, 255, 0.04) 0%,
+          rgba(255, 255, 255, 0.08) 50%,
+          rgba(255, 255, 255, 0.04) 100%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s ease-in-out infinite;
+      border-radius: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: -200% 0;
+      }
+
+      100% {
+        background-position: 200% 0;
+      }
+    }
+
+    .skeleton::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg,
+          transparent,
+          rgba(255, 255, 255, 0.05),
+          transparent);
+      animation: shimmer-overlay 1.5s ease-in-out infinite;
+    }
+
+    @keyframes shimmer-overlay {
+      0% {
+        transform: translateX(-100%);
+      }
+
+      100% {
+        transform: translateX(100%);
+      }
+    }
+
+    /* Skeleton variants */
+    .skeleton-artwork {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 12px;
+      margin-bottom: 22px;
+    }
+
+    .skeleton-title {
+      height: 28px;
+      width: 70%;
+      margin: 0 auto 12px;
+      border-radius: 6px;
+    }
+
+    .skeleton-text {
+      height: 20px;
+      width: 50%;
+      margin: 0 auto 10px;
+      border-radius: 5px;
+    }
+
+    .skeleton-text-small {
+      height: 16px;
+      width: 40%;
+      margin: 0 auto;
+      border-radius: 4px;
+    }
+
+    .skeleton-button {
+      height: 38px;
+      flex: 1;
+      border-radius: 10px;
+    }
+
+    .skeleton-progress {
+      height: 3px;
+      width: 100%;
+      border-radius: 2px;
+      margin-bottom: 8px;
+    }
+
+    .skeleton-time {
+      height: 12px;
+      width: 40px;
+      border-radius: 3px;
+    }
+
+    .skeleton-lyric {
+      height: 36px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      opacity: 0.3;
+    }
+
+    .skeleton-lyric:nth-child(1) {
+      width: 80%;
+    }
+
+    .skeleton-lyric:nth-child(2) {
+      width: 90%;
+    }
+
+    .skeleton-lyric:nth-child(3) {
+      width: 75%;
+      opacity: 1;
+    }
+
+    .skeleton-lyric:nth-child(4) {
+      width: 85%;
+    }
+
+    .skeleton-lyric:nth-child(5) {
+      width: 70%;
+    }
+
+    .skeleton-album-art {
+      width: 200px;
+      height: 200px;
+      border-radius: 12px;
+      flex-shrink: 0;
+    }
+
+    .skeleton-album-title {
+      height: 26px;
+      width: 60%;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+
+    .skeleton-album-text {
+      height: 18px;
+      width: 50%;
+      border-radius: 5px;
+      margin-bottom: 12px;
+    }
+
+    .skeleton-album-description {
+      height: 16px;
+      width: 100%;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+
+    #recentTracksSkeleton {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 28px;
+      justify-content: center;
+    }
+
+    .skeleton-track-card {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      width: 340px;
+      height: 450px;
+      flex-direction: column;
+    }
+
+    .skeleton-track-art {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+
+    .skeleton-track-title {
+      height: 18px;
+      width: 70%;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+
+    .skeleton-track-info {
+      height: 14px;
+      width: 50%;
+      border-radius: 3px;
+      margin-bottom: 12px;
+    }
+
+    .skeleton-track-buttons {
+      margin-top: auto;
+      width: 100%;
+      display: flex;
+      flex-direction: row;
+      gap: 8px;
+    }
+
+    .skeleton-track-button {
+      flex: 1;
+      height: 32px;
+      border-radius: 8px;
+    }
+
+    @media (max-width: 599px) {
+      .skeleton-track-buttons {
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .skeleton-track-button {
+        width: 100%;
+      }
+    }
+
+    /* Visibility control for skeleton and content */
+    .loading-state {
+      display: block !important;
+    }
+
+    .loading-state.hidden {
+      display: none !important;
+    }
+
+    .content-loaded {
+      display: none !important;
+    }
+
+    .content-loaded.visible {
+      display: block !important;
+    }
+
+    /* Ensure album context containers maintain flex layout */
+    #albumContextSkeleton {
+      display: flex !important;
+    }
+
+    #albumContextSkeleton.hidden {
+      display: none !important;
+    }
+
+    #albumContextContent.visible {
+      display: flex !important;
+    }
+
+    /* Ensure artist context containers maintain flex layout */
+    #artistContextSkeleton {
+      display: flex !important;
+    }
+
+    #artistContextSkeleton.hidden {
+      display: none !important;
+    }
+
+    #artistContextContent.visible {
+      display: flex !important;
+    }
+
+    #artistContextContent {
+      display: none !important;
+    }
+
+    #albumContextSkeleton.hidden {
+      display: none !important;
+    }
+
+    /* Ensure buttons skeleton uses flex layout */
+    #buttonsSkeleton {
+      display: flex !important;
+      gap: 10px;
+      width: 100%;
+    }
+
+    #buttonsSkeleton.hidden {
+      display: none !important;
+    }
+
+    #albumContextContent {
+      display: none !important;
+    }
+
+    #albumContextContent.visible {
+      display: flex !important;
+    }
+
+    /* Platform buttons visibility */
+    .platform-btn {
+      display: none !important;
+    }
+
+    .platform-btn.visible {
+      display: flex !important;
+    }
+
+    /* Progress fill visibility */
+    .progress-fill {
+      display: none !important;
+    }
+
+    .progress-fill.visible {
+      display: block !important;
+    }
+
+    /* Time labels visibility */
+    #currentTime,
+    #remainingTime {
+      display: none !important;
+    }
+
+    #currentTime.visible,
+    #remainingTime.visible {
+      display: inline !important;
+    }
+
+    /* Lyrics visibility */
+    #lyricsScroll {
+      display: none !important;
+    }
+
+    #lyricsScroll.visible {
+      display: flex !important;
+    }
+
+    /* Recent tracks visibility */
+    #recentTracks {
+      display: none !important;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    #recentTracks.visible {
+      display: grid !important;
+      opacity: 1;
+    }
+
+    #recentTracksSkeleton {
+      transition: opacity 0.2s ease;
+    }
+
+    #recentTracksSkeleton.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #albumContextSkeleton {
+      display: flex !important;
+    }
+
+    #albumContextSkeleton.hidden {
+      display: none !important;
+    }
+
+    /* Header Section */
+    .header {
+      position: relative;
+      z-index: 3;
+      width: 100%;
+      padding: 16px 20px 12px;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+    }
+
+    .header-left {
+      position: absolute;
+      left: 20px;
+      display: flex;
+      align-items: center;
+    }
+
+    .header-logo {
+      height: 40px;
+      width: auto;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      justify-content: center;
+    }
+
+    .avatar-container {
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .user-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      object-fit: cover;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      display: block;
+    }
+
+    .user-info {
+      text-align: left;
+      min-width: 0;
+    }
+
+    .user-id {
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+      opacity: 0.9;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .header-label {
+      font-size: 12px;
+      opacity: 0.5;
+      margin-top: 4px;
+      font-weight: 400;
+    }
+
+    /* Main Content */
+    .content {
+      position: relative;
+      z-index: 3;
+      width: 100%;
+      max-width: 1250px;
+      margin: 0 auto;
+      padding: 16px 20px;
+      display: flex;
+      gap: 60px;
+      align-items: flex-start;
+      flex: 1;
+    }
+
+    /* Left side - Song details */
+    .left-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      max-width: 500px;
+      width: 100%;
+    }
+
+    /* Album art - Dual image crossfade system */
+    .artwork-container {
+      width: 100%;
+      max-width: 320px;
+      margin-bottom: 22px;
+      position: relative;
+      aspect-ratio: 1;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    /* Loading shimmer for artwork */
+    .artwork-container::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg,
+          rgba(255, 255, 255, 0.02) 0%,
+          rgba(255, 255, 255, 0.06) 50%,
+          rgba(255, 255, 255, 0.02) 100%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s ease-in-out infinite;
+      opacity: 1;
+      transition: opacity 0.4s ease;
+      z-index: 0;
+    }
+
+    .artwork-container.has-image::before {
+      opacity: 0;
+    }
+
+    .artwork {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transition: opacity 0.5s ease-out;
+      z-index: 1;
+    }
+
+    .artwork.active {
+      opacity: 1;
+      z-index: 2;
+    }
+
+    .artwork.loaded {
+      /* Image has loaded successfully */
+    }
+
+    .artwork.inactive {
+      filter: grayscale(0.6) brightness(0.7);
+    }
+
+    .artwork-container.inactive .artwork.active {
+      filter: grayscale(0.6) brightness(0.7);
+    }
+
+    /* Song info */
+    .info {
+      width: 100%;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .song-title {
+      font-size: 22px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      letter-spacing: -0.3px;
+      word-wrap: break-word;
+    }
+
+    .artist-name {
+      font-size: 18px;
+      opacity: 0.6;
+      font-weight: 400;
+      margin-bottom: 10px;
+      word-wrap: break-word;
+    }
+
+    .album-name {
+      font-size: 15px;
+      opacity: 0.45;
+      font-weight: 400;
+      margin-bottom: 8px;
+      font-style: italic;
+      word-wrap: break-word;
+    }
+
+    .app-name {
+      font-size: 13px;
+      opacity: 0.4;
+      font-weight: 400;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      margin-top: 12px;
+    }
+
+    .status-badge svg {
+      vertical-align: middle;
+      margin-right: 4px;
+    }
+
+    .status-badge.paused {
+      background: rgba(255, 159, 10, 0.2);
+      color: rgb(255, 159, 10);
+    }
+
+    .status-badge.stopped {
+      background: rgba(255, 69, 58, 0.2);
+      color: rgb(255, 69, 58);
+    }
+
+    .platform-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .platform-btn {
+      flex: 1;
+      padding: 11px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 400;
+      border: 1.5px solid rgba(255, 255, 255, 0.15);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      text-decoration: none;
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      position: relative;
+      overflow: hidden;
+      color: rgba(255, 255, 255, 0.9);
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .platform-btn svg {
+      flex-shrink: 0;
+    }
+
+    .platform-btn::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg,
+          rgba(255, 255, 255, 0.1),
+          transparent);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .platform-btn:hover::before {
+      opacity: 1;
+    }
+
+    .platform-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.3);
+      color: #fff;
+    }
+
+    .platform-btn:active {
+      transform: scale(0.98);
+    }
+
+    .platform-btn.not-found {
+      opacity: 0.5;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    /* Album Context Section */
+    .album-context {
+      position: relative;
+      z-index: 3;
+      width: 100%;
+      max-width: 1250px;
+      margin: 0 auto;
+      padding: 32px 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .album-context h2 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      letter-spacing: -0.3px;
+      opacity: 0.9;
+      text-align: left;
+    }
+
+    .album-info-container {
+      display: flex;
+      gap: 32px;
+      align-items: flex-start;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 16px;
+      padding: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .album-context-art-container {
+      flex-shrink: 0;
+    }
+
+    .album-context-art {
+      width: 200px;
+      height: 200px;
+      border-radius: 12px;
+      object-fit: cover;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+      display: block;
+    }
+
+    .album-details {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .album-header {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .album-context-title {
+      font-size: 23px;
+      font-weight: 600;
+      letter-spacing: -0.4px;
+      line-height: 1.3;
+      word-wrap: break-word;
+    }
+
+    .album-context-artist {
+      font-size: 17px;
+      opacity: 0.6;
+      font-weight: 400;
+      word-wrap: break-word;
+    }
+
+    .album-meta {
+      display: flex;
+      gap: 8px;
+      font-size: 13px;
+      opacity: 0.6;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .album-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .album-description {
+      font-size: 14px;
+      line-height: 1.6;
+      opacity: 0.7;
+      max-height: 160px;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+
+    .album-description p {
+      margin-bottom: 8px;
+    }
+
+    .album-description p:last-child {
+      margin-bottom: 0;
+    }
+
+    .album-description::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .album-description::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 2px;
+    }
+
+    .album-description::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 2px;
+    }
+
+    .album-description::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .album-genres {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .genre-tag {
+      padding: 6px 14px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      text-transform: capitalize;
+      letter-spacing: 0.3px;
+    }
+
+    .album-loading {
+      text-align: center;
+      padding: 32px;
+      opacity: 0.5;
+      font-size: 14px;
+    }
+
+    .album-context.hidden {
+      display: none;
+    }
+
+    /* ========== ARTIST CONTEXT SECTION ========== */
+    .artist-context {
+      position: relative;
+      z-index: 3;
+      width: 100%;
+      max-width: 1250px;
+      margin: 0 auto;
+      padding: 32px 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .artist-context h2 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      letter-spacing: -0.3px;
+      opacity: 0.9;
+      text-align: left;
+    }
+
+    .artist-info-container {
+      display: flex;
+      gap: 32px;
+      align-items: flex-start;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 16px;
+      padding: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .artist-context-image-container {
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .artist-context-image {
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      object-fit: cover;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+      display: block;
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .artist-verified-badge {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #1db954 0%, #1ed760 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(29, 185, 84, 0.4);
+      border: 2px solid rgba(0, 0, 0, 0.3);
+    }
+
+    .artist-verified-badge svg {
+      width: 16px;
+      height: 16px;
+      color: #fff;
+    }
+
+    .artist-details {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .artist-header {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .artist-context-name {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      line-height: 1.2;
+      word-wrap: break-word;
+      background: linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.85) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .artist-context-type {
+      font-size: 13px;
+      opacity: 0.5;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+
+    .artist-stats {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .artist-stat {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .artist-stat-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: rgba(255, 255, 255, 0.95);
+      letter-spacing: -0.3px;
+    }
+
+    .artist-stat-label {
+      font-size: 11px;
+      opacity: 0.5;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-weight: 500;
+    }
+
+    .artist-tags {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .artist-tag {
+      padding: 6px 14px;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      text-transform: capitalize;
+      letter-spacing: 0.3px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .artist-bio {
+      font-size: 14px;
+      line-height: 1.7;
+      opacity: 0.75;
+      max-height: 140px;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+
+    .artist-bio p {
+      margin-bottom: 10px;
+    }
+
+    .artist-bio p:last-child {
+      margin-bottom: 0;
+    }
+
+    .artist-bio::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .artist-bio::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 2px;
+    }
+
+    .artist-bio::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 2px;
+    }
+
+    .artist-bio::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .artist-bio-link {
+      color: rgba(255, 255, 255, 0.6);
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+
+    .artist-bio-link:hover {
+      color: rgba(255, 255, 255, 0.9);
+      text-decoration: underline;
+    }
+
+    .artist-meta {
+      display: flex;
+      gap: 16px;
+      font-size: 12px;
+      opacity: 0.5;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 8px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .artist-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .artist-meta-item svg {
+      width: 14px;
+      height: 14px;
+      opacity: 0.7;
+    }
+
+    .artist-loading {
+      text-align: center;
+      padding: 32px;
+      opacity: 0.5;
+      font-size: 14px;
+    }
+
+    .artist-context.hidden {
+      display: none;
+    }
+
+    /* Artist skeleton loaders */
+    .skeleton-artist-image {
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+    }
+
+    .skeleton-artist-name {
+      height: 28px;
+      width: 60%;
+      border-radius: 6px;
+    }
+
+    .skeleton-artist-type {
+      height: 14px;
+      width: 80px;
+      border-radius: 4px;
+    }
+
+    .skeleton-artist-stat {
+      height: 40px;
+      width: 80px;
+      border-radius: 6px;
+    }
+
+    .skeleton-artist-bio {
+      height: 16px;
+      width: 100%;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+
+    .recently-played {
+      position: relative;
+      z-index: 3;
+      width: 100%;
+      max-width: 1250px;
+      margin: 0 auto;
+      padding: 32px 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .recently-played h2 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      letter-spacing: -0.3px;
+      opacity: 0.9;
+      text-align: left;
+    }
+
+    .recent-tracks {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 32px;
+      max-width: 100%;
+      justify-content: center;
+    }
+
+    .recent-track {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 20px;
+      cursor: default;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      width: 340px;
+      height: 450px;
+      flex-direction: column;
+    }
+
+    .recent-track-art {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 8px;
+      object-fit: cover;
+      margin-bottom: 14px;
+      display: block;
+    }
+
+    .recent-track-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .recent-track-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .recent-track-artist {
+      font-size: 13px;
+      opacity: 0.6;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .recent-track-album {
+      font-size: 12px;
+      opacity: 0.4;
+      margin-top: 2px;
+      margin-bottom: 12px;
+      font-style: italic;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .recent-track-links {
+      display: flex;
+      gap: 8px;
+      margin-top: auto;
+    }
+
+    .recent-track-link {
+      flex: 1;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 500;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      text-decoration: none;
+      background: rgba(255, 255, 255, 0.05);
+      color: rgba(255, 255, 255, 0.9);
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .recent-track-link:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .recent-track-link.not-found {
+      opacity: 0.3;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    .recent-track-link svg {
+      width: 13px;
+      height: 13px;
+      flex-shrink: 0;
+    }
+
+    /* Footer */
+    .footer {
+      position: relative;
+      z-index: 10;
+      padding: 20px;
+      text-align: center;
+      font-size: 13px;
+      opacity: 0.4;
+      font-weight: 400;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .footer-content {
+      display: grid;
+      grid-template-columns: 1fr auto auto auto 1fr;
+      gap: 16px;
+      align-items: center;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .footer-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .footer-separator {
+      opacity: 0.3;
+      font-weight: 700;
+      grid-column: auto;
+    }
+
+    .footer-left {
+      justify-content: flex-end;
+      grid-column: 1;
+    }
+
+    .footer-tagline {
+      grid-column: 3;
+    }
+
+    .footer-right {
+      justify-content: flex-start;
+      grid-column: 5;
+    }
+
+    /* Progress bar */
+    .progress-container {
+      width: 100%;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: rgba(255, 255, 255, 0.9);
+      transition: width 0.3s linear;
+    }
+
+    .progress-fill.inactive {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .time-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      opacity: 0.5;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Divider */
+    .divider {
+      width: 1px;
+      align-self: stretch;
+      background: rgba(255, 255, 255, 0.1);
+      flex-shrink: 0;
+    }
+
+    /* Right side - Lyrics */
+    .right-section {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      max-width: 500px;
+      width: 100%;
+    }
+
+    .lyrics-container {
+      width: 100%;
+      height: 500px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      position: relative;
+      overflow: hidden;
+      /* Apple Music gradient mask for smooth fade at edges */
+      -webkit-mask-image: linear-gradient(to bottom,
+          transparent 0%,
+          black 15%,
+          black 85%,
+          transparent 100%);
+      mask-image: linear-gradient(to bottom,
+          transparent 0%,
+          black 15%,
+          black 85%,
+          transparent 100%);
+    }
+
+    .lyrics-scroll {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      width: 100%;
+      position: relative;
+      z-index: 2;
+      padding: 0 20px;
+      /* Smoother spring-like easing for Apple Music feel - faster response */
+      transition: transform 0.4s cubic-bezier(0.22, 0.61, 0.36, 1);
+      will-change: transform;
+      /* GPU acceleration for buttery smooth scrolling */
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      perspective: 1000px;
+    }
+
+    .lyric-line {
+      text-align: left;
+      font-size: 26px;
+      font-weight: 700;
+      line-height: 1.35;
+      letter-spacing: -0.4px;
+      user-select: none;
+      position: relative;
+      padding: 8px 0;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      hyphens: auto;
+      /* Apple Music style: dim inactive lines */
+      color: rgba(255, 255, 255, 0.35);
+      /* Faster, smoother transitions */
+      transition:
+        color 0.3s cubic-bezier(0.22, 0.61, 0.36, 1),
+        transform 0.3s cubic-bezier(0.22, 0.61, 0.36, 1),
+        filter 0.3s cubic-bezier(0.22, 0.61, 0.36, 1),
+        opacity 0.3s cubic-bezier(0.22, 0.61, 0.36, 1);
+      transform-origin: left center;
+      /* Subtle blur on inactive lines like Apple Music */
+      filter: blur(0.5px);
+      transform: scale(1) translateZ(0);
+      -webkit-font-smoothing: antialiased;
+      /* GPU acceleration */
+      backface-visibility: hidden;
+      will-change: transform, color, filter;
+    }
+
+    /* Previous lines - slightly dimmer */
+    .lyric-line.past {
+      color: rgba(255, 255, 255, 0.25);
+      filter: blur(0.5px);
+    }
+
+    /* Upcoming lines - medium visibility */
+    .lyric-line.upcoming {
+      color: rgba(255, 255, 255, 0.4);
+      filter: blur(0.3px);
+    }
+
+    /* Active line - subtle glow */
+    .lyric-line.active {
+      color: rgb(255, 255, 255) !important;
+      transform: scale(1.02) translateZ(0);
+      filter: blur(0px);
+      text-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
+    }
+
+    /* Adjacent to active - near lines are more visible */
+    .lyric-line.near-active {
+      color: rgba(255, 255, 255, 0.55);
+      filter: blur(0px);
+    }
+
+    .lyric-line.inactive {
+      opacity: 0.15 !important;
+      filter: blur(1px);
+    }
+
+    /* Loading state */
+    .loading {
+      text-align: center;
+      font-size: 16px;
+      opacity: 0.6;
+    }
+
+    /* Lyrics loader */
+    .lyrics-loader-wrapper {
+      width: 100%;
+      padding-top: 250px;
+    }
+
+    .lyrics-loader {
+      --size: 8px;
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      gap: calc(var(--size) / 2);
+      height: calc(var(--size) * 5);
+      padding-left: 4px;
+      opacity: 0.5;
+    }
+
+    .lyrics-loader div {
+      width: var(--size);
+      height: var(--size);
+      border-radius: var(--size);
+      background-color: rgba(255, 255, 255, 0.6);
+      animation: lyricsWave 2s infinite ease-in-out;
+    }
+
+    @keyframes lyricsWave {
+      25% {
+        height: calc(var(--size) * 4);
+        background-color: rgba(255, 255, 255, 0.9);
+      }
+
+      50% {
+        height: var(--size);
+        background-color: rgba(255, 255, 255, 0.4);
+      }
+    }
+
+    .lyrics-loader :nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .lyrics-loader :nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    .lyrics-loader :nth-child(4) {
+      animation-delay: 0.6s;
+    }
+
+    .lyrics-loader :nth-child(5) {
+      animation-delay: 0.8s;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: scale(0.95);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    /* ========== RESPONSIVE DESIGN ========== */
+
+    /* Large Desktop (1200px+) - Optimal 3-column layout */
+    @media (min-width: 1200px) {
+      .content {
+        padding: 40px 40px;
+      }
+
+      .album-context,
+      .artist-context,
+      .recently-played {
+        padding: 40px 40px;
+      }
+
+      .recent-tracks {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .recent-track {
+        width: 340px;
+        height: 450px;
+      }
+
+      #recentTracksSkeleton {
+        grid-template-columns: repeat(3, 340px);
+        justify-content: center;
+        gap: 36px;
+      }
+
+      .skeleton-track-card {
+        width: 340px;
+        height: 450px;
+      }
+    }
+
+    /* Desktop/Laptop (900px - 1199px) - 2-column layout with side-by-side main content */
+    @media (max-width: 1199px) and (min-width: 900px) {
+      .content {
+        gap: 40px;
+        padding: 32px 24px;
+      }
+
+      .album-context,
+      .artist-context,
+      .recently-played {
+        padding: 32px 24px;
+      }
+
+      .artwork-container {
+        max-width: 280px;
+      }
+
+      .divider {
+        min-height: 350px;
+      }
+
+      .lyrics-container {
+        height: 450px;
+      }
+
+      .lyric-line {
+        font-size: 24px;
+      }
+
+      .lyric-line.active {
+        transform: scale(1.02) translateZ(0);
+      }
+
+      .album-context-art {
+        width: 180px;
+        height: 180px;
+      }
+
+      .recent-tracks {
+        grid-template-columns: repeat(2, 340px);
+        justify-content: center;
+        gap: 28px;
+      }
+
+      .recent-track {
+        width: 340px;
+        height: 450px;
+      }
+
+      #recentTracksSkeleton {
+        grid-template-columns: repeat(2, 340px);
+        justify-content: center;
+      }
+
+      .skeleton-track-card {
+        width: 340px;
+        height: 450px;
+      }
+    }
+
+    /* Tablet Landscape (768px - 899px) - Single column main, 2-column recent tracks */
+    @media (max-width: 899px) and (min-width: 768px) {
+      .content {
+        flex-direction: column;
+        align-items: center;
+        padding: 28px 20px;
+        gap: 32px;
+      }
+
+      .left-section,
+      .right-section {
+        max-width: 100%;
+        width: 100%;
+      }
+
+      .divider {
+        width: 60%;
+        height: 1px;
+        min-height: 1px;
+        align-self: center;
+      }
+
+      .artwork-container {
+        max-width: 340px;
+      }
+
+      .lyrics-container {
+        height: 400px;
+      }
+
+      .lyric-line {
+        font-size: 22px;
+        text-align: center;
+      }
+
+      .lyric-line.active {
+        transform: scale(1.02) translateZ(0);
+        transform-origin: center center;
+      }
+
+      .lyrics-scroll {
+        align-items: center;
+      }
+
+      .album-context,
+      .artist-context,
+      .recently-played {
+        padding: 28px 20px;
+      }
+
+      .album-info-container {
+        gap: 24px;
+      }
+
+      .album-context-art {
+        width: 160px;
+        height: 160px;
+      }
+
+      .recent-tracks {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+      }
+
+      .recent-track {
+        width: 100%;
+        height: auto;
+        min-height: 320px;
+      }
+
+      .recent-track:nth-child(n + 3) {
+        display: none;
+      }
+
+      .recent-track-art {
+        width: 100%;
+        max-width: 260px;
+        height: 260px;
+        margin: 0 auto 12px;
+        object-fit: cover;
+      }
+
+      .skeleton-track-card {
+        width: 100%;
+        height: auto;
+        min-height: 320px;
+        padding: 14px;
+        flex-direction: column;
+      }
+
+      .skeleton-track-card:nth-child(n + 3) {
+        display: none;
+      }
+
+      .skeleton-track-art {
+        width: 100%;
+        max-width: 260px;
+        height: 260px;
+        margin: 0 auto 12px;
+        border-radius: 8px;
+      }
+
+      .skeleton-track-title {
+        margin: 0 auto 8px;
+      }
+
+      .skeleton-track-info {
+        margin: 0 auto 12px;
+      }
+    }
+
+    /* Tablet Portrait (600px - 767px) - 2-column recent tracks */
+    @media (max-width: 767px) and (min-width: 600px) {
+      .header {
+        padding: 24px 16px 12px;
+      }
+
+      .user-avatar {
+        width: 48px;
+        height: 48px;
+      }
+
+      .content {
+        flex-direction: column;
+        align-items: center;
+        padding: 24px 16px;
+        gap: 28px;
+      }
+
+      .left-section,
+      .right-section {
+        max-width: 100%;
+        width: 100%;
+      }
+
+      .divider {
+        width: 50%;
+        height: 1px;
+        min-height: 1px;
+        align-self: center;
+      }
+
+      .artwork-container {
+        max-width: 280px;
+      }
+
+      .song-title {
+        font-size: 20px;
+      }
+
+      .artist-name {
+        font-size: 17px;
+      }
+
+      .platform-buttons {
+        max-width: 100%;
+      }
+
+      .lyrics-container {
+        height: 360px;
+      }
+
+      .lyric-line {
+        font-size: 20px;
+        text-align: center;
+      }
+
+      .lyric-line.active {
+        transform: scale(1.02) translateZ(0);
+        transform-origin: center center;
+      }
+
+      .lyrics-scroll {
+        align-items: center;
+        padding: 0 16px;
+      }
+
+      .album-context,
+      .artist-context,
+      .recently-played {
+        padding: 24px 16px;
+      }
+
+      .album-context h2,
+      .artist-context h2,
+      .recently-played h2 {
+        font-size: 18px;
+      }
+
+      .album-info-container {
+        gap: 20px;
+      }
+
+      .album-context-art {
+        width: 140px;
+        height: 140px;
+      }
+
+      .recent-tracks {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 14px;
+      }
+
+      .recent-track {
+        width: 100%;
+        height: auto;
+        min-height: 280px;
+        padding: 14px;
+      }
+
+      .recent-track:nth-child(n + 3) {
+        display: none;
+      }
+
+      .recent-track-art {
+        width: 100%;
+        max-width: 220px;
+        height: 220px;
+        margin: 0 auto 10px;
+        object-fit: cover;
+      }
+
+      .recent-track-title {
+        font-size: 14px;
+      }
+
+      .recent-track-artist {
+        font-size: 12px;
+      }
+
+      .recent-track-album {
+        font-size: 11px;
+        margin-bottom: 10px;
+      }
+
+      .recent-track-links {
+        gap: 6px;
+      }
+
+      .recent-track-link {
+        padding: 7px 8px;
+        font-size: 10px;
+      }
+
+      .skeleton-track-card {
+        width: 100%;
+        height: auto;
+        min-height: 280px;
+        padding: 14px;
+        flex-direction: column;
+      }
+
+      .skeleton-track-card:nth-child(n + 3) {
+        display: none;
+      }
+
+      .skeleton-track-art {
+        width: 100%;
+        max-width: 220px;
+        height: 220px;
+        margin: 0 auto 10px;
+        border-radius: 8px;
+      }
+
+      .skeleton-track-title {
+        margin: 0 auto 8px;
+        height: 14px;
+      }
+
+      .skeleton-track-info {
+        margin: 0 auto 12px;
+        height: 12px;
+        width: 45%;
+      }
+
+      .skeleton-track-info:last-of-type {
+        width: 40%;
+      }
+    }
+
+    /* Mobile (up to 599px) - Single column everything */
+    @media (max-width: 599px) {
+      .header {
+        padding: 20px 16px 10px;
+        gap: 12px;
+        justify-content: space-between;
+      }
+
+      .header-left {
+        position: static;
+        left: auto;
+      }
+
+      .header-logo {
+        height: 32px;
+      }
+
+      .header-right {
+        justify-content: flex-end;
+      }
+
+      .footer-content {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .footer-separator {
+        display: none;
+      }
+
+      .footer-left,
+      .footer-right,
+      .footer-tagline {
+        justify-content: center;
+      }
+
+      .user-avatar {
+        width: 46px;
+        height: 46px;
+      }
+
+      .user-id {
+        display: none;
+      }
+
+      .content {
+        flex-direction: column;
+        align-items: center;
+        padding: 20px 16px;
+        gap: 24px;
+      }
+
+      .left-section,
+      .right-section {
+        max-width: 100%;
+        width: 100%;
+      }
+
+      .divider {
+        width: 40%;
+        height: 1px;
+        min-height: 1px;
+        align-self: center;
+      }
+
+      .artwork-container {
+        max-width: min(280px, 90vw);
+      }
+
+      .song-title {
+        font-size: 18px;
+      }
+
+      .artist-name {
+        font-size: 16px;
+      }
+
+      .album-name {
+        font-size: 14px;
+      }
+
+      .platform-buttons {
+        max-width: 100%;
+        gap: 8px;
+      }
+
+      .platform-btn {
+        padding: 10px 12px;
+        font-size: 13px;
+      }
+
+      .lyrics-container {
+        height: 320px;
+      }
+
+      .lyrics-loader-wrapper {
+        padding-top: 120px;
+      }
+
+      .lyric-line {
+        font-size: 22px;
+        text-align: center;
+        line-height: 1.4;
+      }
+
+      .lyric-line.active {
+        transform: scale(1.02) translateZ(0);
+        transform-origin: center center;
+      }
+
+      .lyrics-scroll {
+        gap: 16px;
+        align-items: center;
+        padding: 0 12px;
+      }
+
+      /* Center skeleton loaders on mobile */
+      .skeleton-lyric {
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      #lyricsSkeleton {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .album-context,
+      .artist-context,
+      .recently-played {
+        padding: 20px 16px;
+      }
+
+      .album-context h2,
+      .artist-context h2,
+      .recently-played h2 {
+        font-size: 17px;
+        margin-bottom: 16px;
+        text-align: center;
+      }
+
+      /* Center album context skeleton on mobile */
+      #albumContextSkeleton {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
+
+      #albumContextSkeleton .album-details {
+        align-items: center;
+      }
+
+      #albumContextSkeleton .skeleton-album-title,
+      #albumContextSkeleton .skeleton-album-text,
+      #albumContextSkeleton .skeleton-album-description {
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      #albumContextSkeleton .skeleton-description-container {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      /* Center artist context skeleton on mobile */
+      #artistContextSkeleton {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
+
+      #artistContextSkeleton .artist-details {
+        align-items: center;
+      }
+
+      #artistContextSkeleton .skeleton-artist-name,
+      #artistContextSkeleton .skeleton-artist-type,
+      #artistContextSkeleton .skeleton-artist-bio {
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      #artistContextSkeleton .skeleton-description-container {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .album-info-container {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 16px;
+        padding: 18px;
+      }
+
+      .album-context-art {
+        width: 120px;
+        height: 120px;
+      }
+
+      .album-header {
+        align-items: center;
+      }
+
+      .album-context-title {
+        font-size: 18px;
+      }
+
+      .album-context-artist {
+        font-size: 15px;
+      }
+
+      .album-meta {
+        justify-content: center;
+        font-size: 12px;
+      }
+
+      .album-description {
+        text-align: center;
+        font-size: 13px;
+      }
+
+      .album-genres {
+        justify-content: center;
+      }
+
+      /* Artist context mobile styles */
+      .artist-context h2 {
+        font-size: 17px;
+        margin-bottom: 16px;
+        text-align: center;
+      }
+
+      .artist-info-container {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 16px;
+        padding: 18px;
+      }
+
+      .artist-context-image {
+        width: 120px;
+        height: 120px;
+      }
+
+      .artist-verified-badge {
+        width: 26px;
+        height: 26px;
+        bottom: 4px;
+        right: 4px;
+      }
+
+      .artist-verified-badge svg {
+        width: 13px;
+        height: 13px;
+      }
+
+      .artist-header {
+        align-items: center;
+      }
+
+      .artist-context-name {
+        font-size: 20px;
+      }
+
+      .artist-context-type {
+        font-size: 11px;
+      }
+
+      .artist-stats {
+        justify-content: center;
+        gap: 20px;
+      }
+
+      .artist-stat-value {
+        font-size: 16px;
+      }
+
+      .artist-tags {
+        justify-content: center;
+      }
+
+      .artist-bio {
+        text-align: center;
+        font-size: 13px;
+        max-height: 120px;
+      }
+
+      .artist-meta {
+        justify-content: center;
+        font-size: 11px;
+      }
+
+      .skeleton-artist-image {
+        width: 120px;
+        height: 120px;
+      }
+
+      .recent-tracks {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .recent-track {
+        padding: 14px;
+        width: 100%;
+        height: auto;
+        min-height: auto;
+      }
+
+      .recent-track-info {
+        text-align: center;
+      }
+
+      .recent-track-art {
+        width: 100%;
+        max-width: 200px;
+        height: 200px;
+        margin: 0 auto 10px;
+        object-fit: cover;
+      }
+
+      .recent-track-title {
+        font-size: 14px;
+      }
+
+      .recent-track-artist {
+        font-size: 12px;
+      }
+
+      .recent-track-album {
+        font-size: 11px;
+        margin-bottom: 10px;
+      }
+
+      .recent-track-links {
+        gap: 6px;
+      }
+
+      .recent-track-link {
+        padding: 7px 8px;
+        font-size: 10px;
+      }
+
+      .recent-track-link svg {
+        width: 12px;
+        height: 12px;
+      }
+
+      .skeleton-track-card {
+        padding: 14px;
+        width: 100%;
+        height: auto;
+        min-height: auto;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .skeleton-track-art {
+        width: 100%;
+        max-width: 200px;
+        height: 200px;
+        margin: 0 auto 10px;
+        border-radius: 8px;
+      }
+
+      .skeleton-track-title {
+        height: 14px;
+        width: 60%;
+        margin: 0 auto 8px;
+      }
+
+      .skeleton-track-info {
+        height: 12px;
+        width: 45%;
+        margin: 0 auto 6px;
+      }
+
+      .skeleton-track-info:last-of-type {
+        width: 40%;
+        margin-bottom: 12px;
+      }
+
+      .footer {
+        font-size: 12px;
+        padding: 16px;
+      }
+    }
+
+    /* Small Mobile (up to 400px) - Compact single column */
+    @media (max-width: 400px) {
+      .header {
+        padding: 18px 12px 8px;
+      }
+
+      .user-avatar {
+        width: 42px;
+        height: 42px;
+      }
+
+      .user-id {
+        display: none;
+      }
+
+      .content {
+        padding: 16px 12px;
+        gap: 20px;
+      }
+
+      .artwork-container {
+        max-width: min(240px, 85vw);
+      }
+
+      .song-title {
+        font-size: 17px;
+      }
+
+      .artist-name {
+        font-size: 15px;
+      }
+
+      .album-name {
+        font-size: 13px;
+      }
+
+      .platform-btn {
+        padding: 9px 10px;
+        font-size: 12px;
+      }
+
+      .platform-btn svg {
+        width: 15px;
+        height: 15px;
+      }
+
+      .lyrics-container {
+        height: 280px;
+      }
+
+      .lyric-line {
+        font-size: 20px;
+      }
+
+      .lyrics-scroll {
+        gap: 14px;
+        padding: 0 10px;
+      }
+
+      .album-context,
+      .artist-context,
+      .recently-played {
+        padding: 18px 12px;
+      }
+
+      .album-context h2,
+      .artist-context h2,
+      .recently-played h2 {
+        text-align: center;
+      }
+
+      .album-info-container {
+        padding: 16px;
+      }
+
+      .album-context-art {
+        width: 100px;
+        height: 100px;
+      }
+
+      .album-context-title {
+        font-size: 17px;
+      }
+
+      /* Artist context small mobile styles */
+      .artist-info-container {
+        padding: 16px;
+      }
+
+      .artist-context-image {
+        width: 100px;
+        height: 100px;
+      }
+
+      .artist-verified-badge {
+        width: 22px;
+        height: 22px;
+        bottom: 2px;
+        right: 2px;
+      }
+
+      .artist-verified-badge svg {
+        width: 11px;
+        height: 11px;
+      }
+
+      .artist-context-name {
+        font-size: 18px;
+      }
+
+      .artist-stat-value {
+        font-size: 15px;
+      }
+
+      .artist-stat-label {
+        font-size: 10px;
+      }
+
+      .artist-tag {
+        padding: 5px 10px;
+        font-size: 11px;
+      }
+
+      .artist-bio {
+        font-size: 12px;
+        max-height: 100px;
+      }
+
+      .skeleton-artist-image {
+        width: 100px;
+        height: 100px;
+      }
+
+      .recent-track {
+        padding: 12px;
+        width: 100%;
+        height: auto;
+      }
+
+      .recent-track-info {
+        text-align: center;
+      }
+
+      .recent-track-art {
+        width: 100%;
+        max-width: 180px;
+        height: 180px;
+        margin: 0 auto 8px;
+        object-fit: cover;
+      }
+
+      .recent-track-title {
+        font-size: 13px;
+      }
+
+      .recent-track-artist {
+        font-size: 11px;
+      }
+
+      .recent-track-album {
+        font-size: 10px;
+        margin-bottom: 8px;
+      }
+
+      .recent-track-links {
+        gap: 5px;
+      }
+
+      .recent-track-link {
+        padding: 6px 7px;
+        font-size: 9px;
+      }
+
+      .recent-track-link svg {
+        width: 11px;
+        height: 11px;
+      }
+
+      .skeleton-track-card {
+        padding: 12px;
+        width: 100%;
+        height: auto;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .skeleton-track-art {
+        width: 100%;
+        max-width: 180px;
+        height: 180px;
+        margin: 0 auto 8px;
+        border-radius: 8px;
+      }
+
+      .skeleton-track-title {
+        height: 13px;
+        width: 55%;
+        margin: 0 auto 6px;
+      }
+
+      .skeleton-track-info {
+        height: 11px;
+        width: 45%;
+        margin: 0 auto 5px;
+      }
+
+      .skeleton-track-info:last-of-type {
+        width: 40%;
+        margin-bottom: 10px;
+      }
+
+      .skeleton-track-button {
+        height: 28px;
+      }
+
+      .footer {
+        font-size: 11px;
+        padding: 14px;
+      }
+    }
+
+    /* Touch optimization */
+    @media (hover: none) and (pointer: coarse) {
+
+      .platform-btn,
+      .recent-track-link {
+        -webkit-tap-highlight-color: rgba(255, 255, 255, 0.1);
+      }
+
+      .platform-btn:active {
+        transform: scale(0.97);
+      }
+
+      /* Optimize lyrics for touch devices */
+      .lyrics-scroll {
+        /* Use GPU acceleration */
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+      }
+
+      .lyric-line {
+        /* Prevent text selection on touch */
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+    }
+
+    /* Reduce motion for users who prefer it */
+    @media (prefers-reduced-motion: reduce) {
+      .lyrics-scroll {
+        transition: transform 0.2s ease-out;
+      }
+
+      .lyric-line {
+        transition: color 0.2s ease, transform 0.2s ease;
+      }
+
+      #bg-artwork-primary,
+      #bg-artwork-secondary,
+      #bg-artwork-tertiary {
+        animation: none;
+      }
+    }
+
+    /* Landscape phone optimization */
+    @media (max-height: 500px) and (orientation: landscape) {
+      .lyrics-container {
+        height: 280px;
+      }
+
+      .lyric-line {
+        font-size: 20px;
+      }
+
+      .lyrics-scroll {
+        gap: 14px;
+      }
+
+      .content {
+        padding: 16px 20px;
+      }
+    }
+
+    /* Prevent horizontal scroll on mobile */
+    @media (max-width: 599px) {
+      body {
+        overflow-x: hidden;
+      }
+    }
+
+    /* High DPI / Retina optimization */
+    @media (-webkit-min-device-pixel-ratio: 2),
+    (min-resolution: 192dpi) {
+      .lyric-line {
+        -webkit-font-smoothing: subpixel-antialiased;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Hidden image for canvas color extraction -->
+  <img id="albumArtHidden" crossorigin="anonymous" style="display: none" />
+
+  <!-- Apple-style background -->
+  <div id="bg">
+    <div id="bg-artwork-primary"></div>
+    <div id="bg-artwork-secondary"></div>
+    <div id="bg-artwork-tertiary"></div>
+    <div id="bg-overlay"></div>
+  </div>
+
+  <!-- Header with Logo, Avatar and User ID -->
+  <div class="header">
+    <div class="header-left">
+      <img class="header-logo" src="/livia-logo.svg" alt="Livia" />
+    </div>
+    <div class="header-right">
+      <img id="userAvatar" class="user-avatar" src="" alt="User Avatar" style="display: none;" />
+      <div class="user-info">
+        <div class="user-id" id="userId">Loading...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div class="content">
+    <!-- Left Section -->
+    <div class="left-section">
+      <div class="artwork-container" id="artworkContainer">
+        <!-- Dual images for smooth crossfade transitions -->
+        <img id="artwork-a" class="artwork" alt="Album Art" />
+        <img id="artwork-b" class="artwork" alt="Album Art" />
+      </div>
+
+      <div class="info">
+        <!-- Loading skeletons for song info -->
+        <div class="loading-state" id="infoSkeleton">
+          <div class="skeleton skeleton-title"></div>
+          <div class="skeleton skeleton-text"></div>
+          <div class="skeleton skeleton-text-small"></div>
+        </div>
+
+        <!-- Actual content -->
+        <div class="content-loaded" id="infoContent">
+          <h1 id="songTitle" class="song-title">Loading…</h1>
+          <p id="artistName" class="artist-name"></p>
+          <p id="albumName" class="album-name"></p>
+          <p id="appName" class="app-name"></p>
+          <span id="statusBadge" class="status-badge" style="display: none"></span>
+        </div>
+      </div>
+
+      <div class="progress-container">
+        <div class="progress-bar">
+          <!-- Loading skeleton for progress bar -->
+          <div class="skeleton skeleton-progress loading-state" id="progressSkeleton" style="width: 100%; height: 100%">
+          </div>
+          <div class="progress-fill content-loaded" id="progressFill"></div>
+        </div>
+        <div class="time-labels">
+          <span class="loading-state" id="timeSkeleton1">
+            <div class="skeleton skeleton-time" style="display: inline-block"></div>
+          </span>
+          <span class="content-loaded" id="currentTime">0:00</span>
+
+          <span class="loading-state" id="timeSkeleton2">
+            <div class="skeleton skeleton-time" style="display: inline-block"></div>
+          </span>
+          <span class="content-loaded" id="remainingTime">-0:00</span>
+        </div>
+      </div>
+
+      <div class="platform-buttons">
+        <!-- Loading skeletons for platform buttons -->
+        <div class="loading-state" id="buttonsSkeleton" style="display: flex; gap: 10px; width: 100%">
+          <div class="skeleton skeleton-button"></div>
+          <div class="skeleton skeleton-button"></div>
+        </div>
+
+        <!-- Actual buttons -->
+        <a id="spotifyBtn" class="platform-btn spotify content-loaded" href="#" target="_blank">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-spotify"
+            viewBox="0 0 16 16">
+            <path
+              d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0m3.669 11.538a.5.5 0 0 1-.686.165c-1.879-1.147-4.243-1.407-7.028-.77a.499.499 0 0 1-.222-.973c3.048-.696 5.662-.397 7.77.892a.5.5 0 0 1 .166.686m.979-2.178a.624.624 0 0 1-.858.205c-2.15-1.321-5.428-1.704-7.972-.932a.625.625 0 0 1-.362-1.194c2.905-.881 6.517-.454 8.986 1.063a.624.624 0 0 1 .206.858m.084-2.268C10.154 5.56 5.9 5.419 3.438 6.166a.748.748 0 1 1-.434-1.432c2.825-.857 7.523-.692 10.492 1.07a.747.747 0 1 1-.764 1.288" />
+          </svg>
+          Listen on Spotify
+        </a>
+
+        <a id="appleMusicBtn" class="platform-btn apple content-loaded" href="#" target="_blank">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-apple-music"
+            viewBox="0 0 16 16">
+            <path fill-rule="evenodd"
+              d="m10.995 0 .573.001q.241 0 .483.007c.35.01.705.03 1.051.093.352.063.68.166.999.329a3.36 3.36 0 0 1 1.47 1.468c.162.32.265.648.328 1 .063.347.084.7.093 1.051q.007.241.007.483l.001.573v5.99l-.001.573q0 .241-.008.483c-.01.35-.03.704-.092 1.05a3.5 3.5 0 0 1-.33 1 3.36 3.36 0 0 1-1.468 1.468 3.5 3.5 0 0 1-1 .33 7 7 0 0 1-1.05.092q-.241.007-.483.008l-.573.001h-5.99l-.573-.001q-.241 0-.483-.008a7 7 0 0 1-1.052-.092 3.6 3.6 0 0 1-.998-.33 3.36 3.36 0 0 1-1.47-1.468 3.6 3.6 0 0 1-.328-1 7 7 0 0 1-.093-1.05Q.002 11.81 0 11.568V5.005l.001-.573q0-.241.007-.483c.01-.35.03-.704.093-1.05a3.6 3.6 0 0 1 .329-1A3.36 3.36 0 0 1 1.9.431 3.5 3.5 0 0 1 2.896.1 7 7 0 0 1 3.95.008Q4.19.002 4.432 0h.573zm-.107 2.518-4.756.959H6.13a.66.66 0 0 0-.296.133.5.5 0 0 0-.16.31c-.004.027-.01.08-.01.16v5.952c0 .14-.012.275-.106.39-.095.115-.21.15-.347.177l-.31.063c-.393.08-.65.133-.881.223a1.4 1.4 0 0 0-.519.333 1.25 1.25 0 0 0-.332.995c.031.297.166.582.395.792.156.142.35.25.578.296.236.047.49.031.858-.043.196-.04.38-.102.555-.205a1.4 1.4 0 0 0 .438-.405 1.5 1.5 0 0 0 .233-.55c.042-.202.052-.386.052-.588V6.347c0-.276.08-.35.302-.404.024-.005 3.954-.797 4.138-.833.257-.049.378.025.378.294v3.524c0 .14-.001.28-.096.396-.094.115-.211.15-.348.178l-.31.062c-.393.08-.649.133-.88.223a1.4 1.4 0 0 0-.52.334 1.26 1.26 0 0 0-.34.994c.03.297.174.582.404.792a1.2 1.2 0 0 0 .577.294c.237.048.49.03.858-.044.197-.04.381-.098.556-.202a1.4 1.4 0 0 0 .438-.405q.173-.252.233-.549a2.7 2.7 0 0 0 .044-.589V2.865c0-.273-.143-.443-.4-.42-.04.003-.383.064-.424.073" />
+          </svg>
+          Listen on Apple Music
+        </a>
+      </div>
+    </div>
+
+    <!-- Divider -->
+    <div class="divider"></div>
+
+    <!-- Right Section - Lyrics -->
+    <div class="right-section">
+      <div class="lyrics-container" id="lyricsContainer">
+        <!-- Loading skeletons for lyrics -->
+        <div class="loading-state" id="lyricsSkeleton" style="width: 100%">
+          <div class="skeleton skeleton-lyric"></div>
+          <div class="skeleton skeleton-lyric"></div>
+          <div class="skeleton skeleton-lyric"></div>
+          <div class="skeleton skeleton-lyric"></div>
+          <div class="skeleton skeleton-lyric"></div>
+        </div>
+
+        <!-- Actual lyrics -->
+        <div class="lyrics-scroll content-loaded" id="lyricsScroll">
+          <!-- Lyrics will be inserted here -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Artist Context Section -->
+  <div class="artist-context" id="artistContext">
+    <h2>About the Artist</h2>
+
+    <!-- Loading skeleton for artist context -->
+    <div class="artist-info-container loading-state" id="artistContextSkeleton">
+      <div class="artist-context-image-container">
+        <div class="skeleton skeleton-artist-image"></div>
+      </div>
+      <div class="artist-details">
+        <div class="artist-header">
+          <div class="skeleton skeleton-artist-name"></div>
+          <div class="skeleton skeleton-artist-type"></div>
+        </div>
+        <div class="artist-stats" style="margin-top: 8px;">
+          <div class="skeleton skeleton-artist-stat"></div>
+          <div class="skeleton skeleton-artist-stat"></div>
+        </div>
+        <div class="artist-tags" style="margin-top: 8px;">
+          <div class="skeleton" style="height: 28px; width: 70px; border-radius: 16px;"></div>
+          <div class="skeleton" style="height: 28px; width: 55px; border-radius: 16px;"></div>
+          <div class="skeleton" style="height: 28px; width: 80px; border-radius: 16px;"></div>
+        </div>
+        <div class="skeleton-description-container" style="margin-top: 12px;">
+          <div class="skeleton skeleton-artist-bio"></div>
+          <div class="skeleton skeleton-artist-bio" style="width: 90%;"></div>
+          <div class="skeleton skeleton-artist-bio" style="width: 85%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actual artist content -->
+    <div class="artist-info-container content-loaded" id="artistContextContent">
+      <div class="artist-context-image-container">
+        <img id="artistContextImage" class="artist-context-image" alt="Artist" />
+        <div class="artist-verified-badge" id="artistVerifiedBadge" style="display: none;">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path fill-rule="evenodd"
+              d="M8.603 3.799A4.49 4.49 0 0112 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 013.498 1.307 4.491 4.491 0 011.307 3.497A4.49 4.49 0 0121.75 12a4.49 4.49 0 01-1.549 3.397 4.491 4.491 0 01-1.307 3.497 4.491 4.491 0 01-3.497 1.307A4.49 4.49 0 0112 21.75a4.49 4.49 0 01-3.397-1.549 4.49 4.49 0 01-3.498-1.306 4.491 4.491 0 01-1.307-3.498A4.49 4.49 0 012.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 011.307-3.497 4.49 4.49 0 013.497-1.307zm7.007 6.387a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z"
+              clip-rule="evenodd" />
+          </svg>
+        </div>
+      </div>
+      <div class="artist-details">
+        <div class="artist-header">
+          <div class="artist-context-name" id="artistContextName">Loading...</div>
+          <div class="artist-context-type" id="artistContextType"></div>
+        </div>
+        <div class="artist-stats" id="artistStats"></div>
+        <div class="artist-tags" id="artistTags"></div>
+        <div class="artist-bio" id="artistBio"></div>
+        <div class="artist-meta" id="artistMeta"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Album Context Section -->
+  <div class="album-context" id="albumContext">
+    <h2>About This Album</h2>
+
+    <!-- Loading skeleton for album context -->
+    <div class="album-info-container loading-state" id="albumContextSkeleton">
+      <div class="album-context-art-container">
+        <div class="skeleton skeleton-album-art"></div>
+      </div>
+      <div class="album-details">
+        <div class="album-header">
+          <div class="skeleton skeleton-album-title"></div>
+          <div class="skeleton skeleton-album-text"></div>
+        </div>
+        <div class="album-meta">
+          <div class="skeleton" style="height: 14px; width: 60px; border-radius: 3px;"></div>
+          <div class="skeleton" style="height: 14px; width: 80px; border-radius: 3px;"></div>
+          <div class="skeleton" style="height: 14px; width: 70px; border-radius: 3px;"></div>
+        </div>
+        <div class="album-genres" style="margin-top: 4px;">
+          <div class="skeleton" style="height: 24px; width: 60px; border-radius: 16px;"></div>
+          <div class="skeleton" style="height: 24px; width: 75px; border-radius: 16px;"></div>
+          <div class="skeleton" style="height: 24px; width: 50px; border-radius: 16px;"></div>
+        </div>
+        <div class="skeleton-description-container" style="margin-top: 12px;">
+          <div class="skeleton skeleton-album-description"></div>
+          <div class="skeleton skeleton-album-description" style="width: 85%"></div>
+          <div class="skeleton skeleton-album-description" style="width: 90%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actual album content -->
+    <div class="album-info-container content-loaded" id="albumContextContent">
+      <div class="album-context-art-container">
+        <img id="albumContextArt" class="album-context-art" alt="Album Art" />
+      </div>
+      <div class="album-details">
+        <div class="album-header">
+          <div class="album-context-title" id="albumContextTitle">
+            Loading...
+          </div>
+          <div class="album-context-artist" id="albumContextArtist"></div>
+        </div>
+        <div class="album-genres" id="albumGenres"></div>
+        <div class="album-description" id="albumDescription"></div>
+        <div class="album-meta" id="albumMeta"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recently Played Section -->
+  <div class="recently-played">
+    <h2>Recently Played</h2>
+
+    <!-- Loading skeletons for recently played -->
+    <div class="recent-tracks loading-state" id="recentTracksSkeleton">
+      <div class="skeleton-track-card">
+        <div class="skeleton skeleton-track-art"></div>
+        <div class="skeleton skeleton-track-title"></div>
+        <div class="skeleton skeleton-track-info"></div>
+        <div class="skeleton skeleton-track-info"></div>
+        <div class="skeleton-track-buttons">
+          <div class="skeleton skeleton-track-button"></div>
+          <div class="skeleton skeleton-track-button"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actual recently played tracks -->
+    <div id="recentTracks" class="recent-tracks">
+      <!-- Recent tracks will be inserted here -->
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="footer-content">
+      <div class="footer-item footer-left">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person"
+          viewBox="0 0 16 16">
+          <path
+            d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6m2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0m4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4m-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10s-3.516.68-4.168 1.332c-.678.678-.83 1.418-.832 1.664z" />
+        </svg>
+        <span>Logo designed by Danisha</span>
+      </div>
+
+      <div class="footer-separator">|</div>
+
+      <div class="footer-item footer-tagline">
+        <img src="/livia-logo.svg" alt="Livia" style="height: 16px; width: auto;">
+        <span>Livia - an enhanced Discord web activity status</span>
+      </div>
+
+      <div class="footer-separator">|</div>
+
+      <div class="footer-item footer-right">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-code-slash"
+          viewBox="0 0 16 16">
+          <path
+            d="M10.478 1.647a.5.5 0 1 0-.956-.294l-4 13a.5.5 0 0 0 .956.294zM4.854 4.146a.5.5 0 0 1 0 .708L1.707 8l3.147 3.146a.5.5 0 0 1-.708.708l-3.5-3.5a.5.5 0 0 1 0-.708l3.5-3.5a.5.5 0 0 1 .708 0m6.292 0a.5.5 0 0 0 0 .708L14.293 8l-3.147 3.146a.5.5 0 0 0 .708.708l3.5-3.5a.5.5 0 0 0 0-.708l-3.5-3.5a.5.5 0 0 0-.708 0" />
+        </svg>
+        <span>Developed by Mohsin</span>
+      </div>
+    </div>
+  </div>
+  <script>
+    const parts = window.location.pathname.split("/");
+    const sessionId = parts[parts.length - 1];
+
+    if (!sessionId) {
+      document.body.innerHTML = "<div class='loading'>Invalid session</div>";
+      throw new Error("No session ID");
+    }
+
+    let sessionData = null;
+    let lyrics = [];
+    let songDuration = null;
+    let updateInterval = null;
+    let pollInterval = null; // FIX: Store reference to poll interval
+    let localPlaybackTime = 0;
+    let lastServerPosition = 0;
+    let lastSyncTimestamp = Date.now();
+    let isPlaying = false;
+    let isInitialLoad = true;
+
+    // Request cancellation for lyrics/album fetches
+    let currentLyricsFetchController = null;
+    let currentAlbumFetchController = null;
+
+    // Cache for link verification
+    const linkCache = new Map();
+
+    // ========== Artwork Crossfade Manager ==========
+    const artworkManager = {
+      currentSlot: 'a', // 'a' or 'b' - which image is currently active
+      imageCache: new Map(), // URL -> preloaded Image
+      currentUrl: null,
+      isLoading: false,
+
+      // Preload an image and cache it
+      preload(url) {
+        if (this.imageCache.has(url)) {
+          return Promise.resolve(this.imageCache.get(url));
+        }
+
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => {
+            this.imageCache.set(url, img);
+            // Keep cache size reasonable (max 10 images)
+            if (this.imageCache.size > 10) {
+              const firstKey = this.imageCache.keys().next().value;
+              this.imageCache.delete(firstKey);
+            }
+            resolve(img);
+          };
+          img.onerror = () => reject(new Error('Failed to load image'));
+          img.src = url;
+        });
+      },
+
+      // Update artwork with smooth crossfade
+      async update(url, onTransitionComplete) {
+        if (!url || url === this.currentUrl) return;
+        if (this.isLoading) return; // Prevent overlapping transitions
+
+        this.isLoading = true;
+        const container = document.getElementById('artworkContainer');
+        const imgA = document.getElementById('artwork-a');
+        const imgB = document.getElementById('artwork-b');
+
+        if (!container || !imgA || !imgB) {
+          this.isLoading = false;
+          return;
+        }
+
+        // Determine which slot to use for new image
+        const nextSlot = this.currentSlot === 'a' ? 'b' : 'a';
+        const nextImg = nextSlot === 'a' ? imgA : imgB;
+        const currentImg = this.currentSlot === 'a' ? imgA : imgB;
+
+        console.log(`🖼️ Loading artwork: ${url.substring(0, 50)}...`);
+
+        try {
+          // Preload the new image (this is the key - load BEFORE showing)
+          await this.preload(url);
+
+          // Set the source (image is already cached, so this is instant)
+          nextImg.src = url;
+          nextImg.classList.add('loaded');
+
+          // Wait a tiny bit for the browser to actually render the image
+          await new Promise(r => requestAnimationFrame(r));
+
+          // Now crossfade: activate new, deactivate old
+          nextImg.classList.add('active');
+          currentImg.classList.remove('active');
+
+          // Mark container as having an image (hides shimmer)
+          container.classList.add('has-image');
+
+          // Update state
+          this.currentSlot = nextSlot;
+          this.currentUrl = url;
+
+          console.log(`✅ Artwork crossfade complete`);
+
+          // Call the completion callback (for gradient, etc)
+          if (onTransitionComplete) {
+            onTransitionComplete();
+          }
+
+        } catch (err) {
+          console.error('Failed to load artwork:', err);
+          // On error, show placeholder
+          nextImg.src = 'https://placehold.co/320x320/222/444?text=No+Art';
+          nextImg.classList.add('loaded', 'active');
+          currentImg.classList.remove('active');
+          container.classList.add('has-image');
+          this.currentSlot = nextSlot;
+        }
+
+        this.isLoading = false;
+      },
+
+      // Set inactive state (paused/stopped)
+      setInactive(inactive) {
+        const container = document.getElementById('artworkContainer');
+        if (container) {
+          if (inactive) {
+            container.classList.add('inactive');
+          } else {
+            container.classList.remove('inactive');
+          }
+        }
+      }
+    };
+
+    // ========== Loading State Management ==========
+    function hideLoadingState(elementId) {
+      const skeleton = document.getElementById(elementId);
+      if (skeleton) {
+        skeleton.classList.add("hidden");
+      }
+    }
+
+    function showContent(elementId) {
+      const content = document.getElementById(elementId);
+      if (content) {
+        content.classList.add("visible");
+      }
+    }
+
+    function transitionToContent() {
+      // Hide all loading skeletons (artwork now has its own shimmer in CSS)
+      hideLoadingState("infoSkeleton");
+      hideLoadingState("progressSkeleton");
+      hideLoadingState("timeSkeleton1");
+      hideLoadingState("timeSkeleton2");
+      hideLoadingState("buttonsSkeleton");
+      hideLoadingState("lyricsSkeleton");
+      hideLoadingState("recentTracksSkeleton");
+
+      // Show all content elements (artwork handles its own visibility via artworkManager)
+      const infoContent = document.getElementById("infoContent");
+      if (infoContent) {
+        infoContent.classList.add("visible");
+      }
+
+      const progressFill = document.getElementById("progressFill");
+      if (progressFill) {
+        progressFill.classList.add("visible");
+      }
+
+      const currentTime = document.getElementById("currentTime");
+      if (currentTime) {
+        currentTime.classList.add("visible");
+      }
+
+      const remainingTime = document.getElementById("remainingTime");
+      if (remainingTime) {
+        remainingTime.classList.add("visible");
+      }
+
+      const spotifyBtn = document.getElementById("spotifyBtn");
+      if (spotifyBtn) {
+        spotifyBtn.classList.add("visible");
+      }
+
+      const appleMusicBtn = document.getElementById("appleMusicBtn");
+      if (appleMusicBtn) {
+        appleMusicBtn.classList.add("visible");
+      }
+
+      const lyricsScroll = document.getElementById("lyricsScroll");
+      if (lyricsScroll) {
+        lyricsScroll.classList.add("visible");
+      }
+
+      const recentTracks = document.getElementById("recentTracks");
+      if (recentTracks) {
+        recentTracks.classList.add("visible");
+      }
+    }
+
+    // ========== Link Verification Functions ==========
+    async function verifySpotifyLink(songTitle, artistName) {
+      const cacheKey = `spotify_${songTitle}_${artistName}`;
+
+      if (linkCache.has(cacheKey)) {
+        return linkCache.get(cacheKey);
+      }
+
+      const searchQuery = encodeURIComponent(`${songTitle} ${artistName}`);
+      const result = {
+        found: "unknown",
+        url: `https://open.spotify.com/search/${searchQuery}`,
+      };
+      linkCache.set(cacheKey, result);
+      return result;
+    }
+
+    async function verifyAppleMusicLink(songTitle, artistName) {
+      const cacheKey = `apple_${songTitle}_${artistName}`;
+
+      if (linkCache.has(cacheKey)) {
+        return linkCache.get(cacheKey);
+      }
+
+      // iTunes API doesn't support CORS, so we just use the search URL directly
+      const searchQuery = encodeURIComponent(`${songTitle} ${artistName}`);
+      const result = {
+        found: "unknown",
+        url: `https://music.apple.com/search?term=${searchQuery}`,
+      };
+      linkCache.set(cacheKey, result);
+      return result;
+    }
+
+    // ========== Recently Played Management ==========
+    let recentlyPlayed = [];
+    const API_BASE = "https://api.livia.mom";
+    const MIN_SKELETON_TIME = 8000; // Minimum ms to show skeleton for smooth UX
+
+    async function loadRecentlyPlayed() {
+      const skeleton = document.getElementById("recentTracksSkeleton");
+      const container = document.getElementById("recentTracks");
+      const startTime = Date.now();
+
+      // Ensure skeleton is visible at start
+      if (skeleton) {
+        skeleton.classList.remove("hidden");
+      }
+      if (container) {
+        container.classList.remove("visible");
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/history?limit=3`);
+
+        if (!res.ok) {
+          console.log("Failed to load history from backend:", res.status);
+          // Still wait minimum time before hiding skeleton
+          const elapsed = Date.now() - startTime;
+          if (elapsed < MIN_SKELETON_TIME) {
+            await new Promise(r => setTimeout(r, MIN_SKELETON_TIME - elapsed));
+          }
+          renderRecentlyPlayed();
+          return;
+        }
+
+        const data = await res.json();
+
+        if (data.tracks && data.tracks.length > 0) {
+          // Map backend format to frontend format
+          recentlyPlayed = data.tracks.map(track => ({
+            id: track.id,
+            song: track.song,
+            artist: track.artist,
+            album: track.album || "",
+            artworkUrl: track.albumArt || "",
+            timestamp: track.playedAt
+          }));
+
+          console.log(
+            `✅ Loaded ${recentlyPlayed.length} recently played tracks from backend`
+          );
+        }
+
+        // Wait minimum skeleton time for smooth transition
+        const elapsed = Date.now() - startTime;
+        if (elapsed < MIN_SKELETON_TIME) {
+          await new Promise(r => setTimeout(r, MIN_SKELETON_TIME - elapsed));
+        }
+
+        renderRecentlyPlayed();
+      } catch (err) {
+        console.log("Error loading history from backend:", err);
+        recentlyPlayed = [];
+
+        // Still wait minimum time
+        const elapsed = Date.now() - startTime;
+        if (elapsed < MIN_SKELETON_TIME) {
+          await new Promise(r => setTimeout(r, MIN_SKELETON_TIME - elapsed));
+        }
+        renderRecentlyPlayed();
+      }
+    }
+
+    function addToRecentlyPlayed(song, artist, artworkUrl, album) {
+      // History is now managed by the backend automatically
+      // when songs change. This function just updates the local
+      // display without needing to save anything.
+      if (!song || !artist) return;
+
+      const trackId = `${song.toLowerCase()}-${artist.toLowerCase()}`;
+      recentlyPlayed = recentlyPlayed.filter((t) => t.id !== trackId);
+
+      recentlyPlayed.unshift({
+        id: trackId,
+        song,
+        artist,
+        album: album || "",
+        artworkUrl,
+        timestamp: Date.now(),
+      });
+
+      recentlyPlayed = recentlyPlayed.slice(0, 3);
+
+      // Re-render immediately (no skeleton needed for updates)
+      renderRecentlyPlayed();
+
+      // Refresh from backend after a short delay to sync
+      setTimeout(() => {
+        // Silent refresh - don't show skeleton for background sync
+        fetch(`${API_BASE}/history?limit=3`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.tracks && data.tracks.length > 0) {
+              recentlyPlayed = data.tracks.map(track => ({
+                id: track.id,
+                song: track.song,
+                artist: track.artist,
+                album: track.album || "",
+                artworkUrl: track.albumArt || "",
+                timestamp: track.playedAt
+              }));
+              renderRecentlyPlayed();
+            }
+          })
+          .catch(() => { });
+      }, 1500);
+    }
+
+    async function renderRecentlyPlayed() {
+      const container = document.getElementById("recentTracks");
+      const skeleton = document.getElementById("recentTracksSkeleton");
+
+      if (!container) return;
+
+      // Hide skeleton when rendering
+      if (skeleton) {
+        skeleton.classList.add("hidden");
+      }
+
+      // Show the actual container
+      container.classList.add("visible");
+
+      if (recentlyPlayed.length === 0) {
+        container.innerHTML =
+          '<p style="opacity: 0.5; text-align: center; grid-column: 1 / -1;">No recent tracks yet</p>';
+        return;
+      }
+
+      container.innerHTML = recentlyPlayed
+        .map(
+          (track) => `
+  <div class="recent-track">
+    <img src="${track.artworkUrl || "https://placehold.co/100x100/333/999?text=No+Image"
+            }" alt="${track.song
+            }" class="recent-track-art" crossorigin="anonymous" onerror="this.src='https://placehold.co/100x100/333/999?text=No+Image'">
+    <div class="recent-track-info">
+      <div class="recent-track-title">${escapeHtml(track.song)}</div>
+      <div class="recent-track-artist">${escapeHtml(track.artist)}</div>
+      <div class="recent-track-album">${escapeHtml(track.album || "")}</div>
+      <div class="recent-track-links">
+        <a href="#" class="recent-track-link spotify-link" data-song="${escapeHtml(
+              track.song
+            )}" data-artist="${escapeHtml(track.artist)}" target="_blank">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0m3.669 11.538a.5.5 0 0 1-.686.165c-1.879-1.147-4.243-1.407-7.028-.77a.499.499 0 0 1-.222-.973c3.048-.696 5.662-.397 7.77.892a.5.5 0 0 1 .166.686m.979-2.178a.624.624 0 0 1-.858.205c-2.15-1.321-5.428-1.704-7.972-.932a.625.625 0 0 1-.362-1.194c2.905-.881 6.517-.454 8.986 1.063a.624.624 0 0 1 .206.858m.084-2.268C10.154 5.56 5.9 5.419 3.438 6.166a.748.748 0 1 1-.434-1.432c2.825-.857 7.523-.692 10.492 1.07a.747.747 0 1 1-.764 1.288"/>
+          </svg>
+          Spotify
+        </a>
+        <a href="#" class="recent-track-link apple-link" data-song="${escapeHtml(
+              track.song
+            )}" data-artist="${escapeHtml(track.artist)}" target="_blank">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+            <path fill-rule="evenodd" d="m10.995 0 .573.001q.241 0 .483.007c.35.01.705.03 1.051.093.352.063.68.166.999.329a3.36 3.36 0 0 1 1.47 1.468c.162.32.265.648.328 1 .063.347.084.7.093 1.051q.007.241.007.483l.001.573v5.99l-.001.573q0 .241-.008.483c-.01.35-.03.704-.092 1.05a3.5 3.5 0 0 1-.33 1 3.36 3.36 0 0 1-1.468 1.468 3.5 3.5 0 0 1-1 .33 7 7 0 0 1-1.05.092q-.241.007-.483.008l-.573.001h-5.99l-.573-.001q-.241 0-.483-.008a7 7 0 0 1-1.052-.092 3.6 3.6 0 0 1-.998-.33 3.36 3.36 0 0 1-1.47-1.468 3.6 3.6 0 0 1-.328-1 7 7 0 0 1-.093-1.05Q.002 11.81 0 11.568V5.005l.001-.573q0-.241.007-.483c.01-.35.03-.704.093-1.05a3.6 3.6 0 0 1 .329-1A3.36 3.36 0 0 1 1.9.431 3.5 3.5 0 0 1 2.896.1 7 7 0 0 1 3.95.008Q4.19.002 4.432 0h.573zm-.107 2.518-4.756.959H6.13a.66.66 0 0 0-.296.133.5.5 0 0 0-.16.31c-.004.027-.01.08-.01.16v5.952c0 .14-.012.275-.106.39-.095.115-.21.15-.347.177l-.31.063c-.393.08-.65.133-.881.223a1.4 1.4 0 0 0-.519.333 1.25 1.25 0 0 0-.332.995c.031.297.166.582.395.792.156.142.35.25.578.296.236.047.49.031.858-.043.196-.04.38-.102.555-.205a1.4 1.4 0 0 0 .438-.405 1.5 1.5 0 0 0 .233-.55c.042-.202.052-.386.052-.588V6.347c0-.276.08-.35.302-.404.024-.005 3.954-.797 4.138-.833.257-.049.378.025.378.294v3.524c0 .14-.001.28-.096.396-.094.115-.211.15-.348.178l-.31.062c-.393.08-.649.133-.88.223a1.4 1.4 0 0 0-.52.334 1.26 1.26 0 0 0-.34.994c.03.297.174.582.404.792a1.2 1.2 0 0 0 .577.294c.237.048.49.03.858-.044.197-.04.381-.098.556-.202a1.4 1.4 0 0 0 .438-.405q.173-.252.233-.549a2.7 2.7 0 0 0 .044-.589V2.865c0-.273-.143-.443-.4-.42-.04.003-.383.064-.424.073"/>
+          </svg>
+          Apple
+        </a>
+      </div>
+    </div>
+  </div>
+`
+        )
+        .join("");
+
+      for (const track of recentlyPlayed) {
+        verifyTrackLinks(track.song, track.artist);
+      }
+    }
+
+    async function verifyTrackLinks(songTitle, artistName) {
+      const spotifyResult = await verifyAppleMusicLink(songTitle, artistName);
+      const spotifyLinks = document.querySelectorAll(
+        `.spotify-link[data-song="${escapeHtml(
+          songTitle
+        )}"][data-artist="${escapeHtml(artistName)}"]`
+      );
+
+      spotifyLinks.forEach((link) => {
+        const searchQuery = encodeURIComponent(`${songTitle} ${artistName}`);
+        link.href = `https://open.spotify.com/search/${searchQuery}`;
+
+        if (spotifyResult.found === false) {
+          link.classList.add("not-found");
+        }
+      });
+
+      const appleResult = await verifyAppleMusicLink(songTitle, artistName);
+      const appleLinks = document.querySelectorAll(
+        `.apple-link[data-song="${escapeHtml(
+          songTitle
+        )}"][data-artist="${escapeHtml(artistName)}"]`
+      );
+
+      appleLinks.forEach((link) => {
+        link.href = appleResult.url;
+
+        if (appleResult.found === false) {
+          link.classList.add("not-found");
+        }
+      });
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Clean artist name - remove album info and special characters
+    function cleanArtistName(artistName) {
+      if (!artistName) return "";
+
+      // Remove everything after em dash (—) or hyphen (-) if it looks like an album
+      artistName = artistName.split("—")[0].trim();
+      artistName = artistName.split(" - ")[0].trim();
+
+      // Remove common patterns
+      artistName = artistName.replace(/\s*\(.*?\)\s*/g, ""); // Remove (Album Name)
+      artistName = artistName.replace(/\s*\[.*?\]\s*/g, ""); // Remove [Album Name]
+
+      return artistName.trim();
+    }
+
+    // Clean song title - remove features and extra info for better lyrics matching
+    function cleanSongTitle(songTitle) {
+      if (!songTitle) return "";
+
+      // Remove featuring artists for lyrics search
+      songTitle = songTitle.replace(/\s*\(feat\..*?\)/gi, "");
+      songTitle = songTitle.replace(/\s*\[feat\..*?\]/gi, "");
+      songTitle = songTitle.replace(/\s*feat\..*$/gi, "");
+      songTitle = songTitle.replace(/\s*ft\..*$/gi, "");
+
+      // Remove (Remix), (Acoustic), etc for better matching
+      songTitle = songTitle.replace(
+        /\s*\((remix|acoustic|live|radio edit|album version).*?\)/gi,
+        ""
+      );
+
+      return songTitle.trim();
+    }
+
+    // ========== Platform Buttons Update ==========
+    async function updatePlatformButtons(songTitle, artistName) {
+      const spotifyBtn = document.getElementById("spotifyBtn");
+      const appleMusicBtn = document.getElementById("appleMusicBtn");
+
+      if (!spotifyBtn || !appleMusicBtn) return;
+
+      const query = encodeURIComponent(`${songTitle} ${artistName}`);
+      spotifyBtn.href = `https://open.spotify.com/search/${query}`;
+      appleMusicBtn.href = `https://music.apple.com/search?term=${query}`;
+
+      spotifyBtn.classList.remove("verified", "not-found");
+      appleMusicBtn.classList.remove("verified", "not-found");
+
+      const appleResult = await verifyAppleMusicLink(songTitle, artistName);
+      appleMusicBtn.href = appleResult.url;
+
+      if (appleResult.found === false) {
+        appleMusicBtn.classList.add("not-found");
+        console.log("❌ Apple Music: Track not found");
+      } else if (appleResult.found === true) {
+        console.log("✅ Apple Music: Track verified");
+      }
+
+      console.log(
+        "🔍 Spotify: Using search URL (verification requires auth)"
+      );
+    }
+
+    // ========== Album Context Management ==========
+    let currentAlbumContext = null;
+
+    // Cache album context by album+artist to ensure consistent artwork across tracks
+    const albumContextCache = new Map();
+
+    function getAlbumCacheKey(albumName, artistName) {
+      return `${albumName?.toLowerCase().trim()}-${artistName?.toLowerCase().trim()}`;
+    }
+
+    async function fetchAlbumContext(
+      albumName,
+      artistName,
+      currentArtworkUrl,
+      geminiData = {}
+    ) {
+      // Cancel previous fetch if still running
+      if (currentAlbumFetchController) {
+        currentAlbumFetchController.abort();
+      }
+      currentAlbumFetchController = new AbortController();
+
+      if (!albumName || !artistName) {
+        console.log("Missing album or artist info");
+        return null;
+      }
+
+      // Check cache first - ensures consistent artwork for same album
+      const cacheKey = getAlbumCacheKey(albumName, artistName);
+      if (albumContextCache.has(cacheKey)) {
+        console.log(`📦 Using cached album context for: ${albumName}`);
+        return albumContextCache.get(cacheKey);
+      }
+
+      // Clean artist name for better matching
+      const cleanedArtist = cleanArtistName(artistName);
+
+      console.log(`💿 Fetching album context for: "${albumName}" by "${cleanedArtist}"`);
+      console.log(`🤖 Gemini data received:`, geminiData);
+
+      try {
+        // ========== PRIMARY: Use Gemini AI data from session ==========
+        // Gemini provides: genre, year, label, trackCount, albumDescription, artistBio
+        const geminiGenre = geminiData.genre || null;
+        const geminiYear = geminiData.year || null;
+        const geminiLabel = geminiData.label || null;
+        const geminiTrackCount = geminiData.trackCount || null;
+        const geminiDescription = geminiData.albumDescription || null;
+
+        // Check if we have enough Gemini data (genre + year minimum)
+        const hasGeminiData = geminiGenre && geminiYear;
+
+        if (hasGeminiData) {
+          console.log(`✅ Using Gemini AI data: ${geminiGenre}, ${geminiYear}, ${geminiLabel || 'no label'}`);
+        }
+
+        // ========== FALLBACK: iTunes API for missing metadata ==========
+        let itunesYear = null;
+        let itunesTrackCount = null;
+        let itunesGenre = null;
+        let itunesLabel = null;
+
+        // Only fetch from iTunes if Gemini data is incomplete
+        if (!hasGeminiData) {
+          try {
+            const itunesQuery = encodeURIComponent(`${albumName} ${cleanedArtist}`);
+            const itunesUrl = `https://itunes.apple.com/search?term=${itunesQuery}&entity=album&limit=5`;
+
+            console.log(`🔍 Fetching iTunes metadata (Gemini incomplete)...`);
+
+            const itunesResponse = await fetch(itunesUrl, {
+              signal: currentAlbumFetchController.signal,
+            });
+            const itunesData = await itunesResponse.json();
+
+            if (itunesData.resultCount > 0) {
+              // Find best match
+              let bestMatch = null;
+              let highestScore = 0;
+
+              for (const result of itunesData.results) {
+                let score = 0;
+
+                const resultAlbumLower = result.collectionName?.toLowerCase().trim() || '';
+                const searchAlbumLower = albumName.toLowerCase().trim();
+                const resultArtistLower = result.artistName?.toLowerCase().trim() || '';
+                const searchArtistLower = cleanedArtist.toLowerCase().trim();
+
+                if (resultAlbumLower === searchAlbumLower) {
+                  score += 100;
+                } else if (resultAlbumLower.includes(searchAlbumLower) || searchAlbumLower.includes(resultAlbumLower)) {
+                  score += 50;
+                }
+
+                if (resultArtistLower === searchArtistLower) {
+                  score += 100;
+                } else if (resultArtistLower.includes(searchArtistLower) || searchArtistLower.includes(resultArtistLower)) {
+                  score += 50;
+                }
+
+                if (result.trackCount && result.trackCount >= 8) {
+                  score += 30;
+                }
+
+                if (score > highestScore) {
+                  highestScore = score;
+                  bestMatch = result;
+                }
+              }
+
+              if (bestMatch && highestScore >= 50) {
+                console.log(`✅ iTunes match: ${bestMatch.collectionName} by ${bestMatch.artistName}`);
+
+                itunesYear = bestMatch.releaseDate ? new Date(bestMatch.releaseDate).getFullYear() : null;
+                itunesTrackCount = bestMatch.trackCount;
+                itunesGenre = bestMatch.primaryGenreName;
+                itunesLabel = bestMatch.copyright;
+              }
+            }
+          } catch (err) {
+            if (err.name === 'AbortError') throw err;
+            console.log('⚠️ iTunes metadata fetch failed:', err);
+          }
+        }
+
+        // ========== COMBINE DATA: Gemini primary, iTunes fallback ==========
+        const finalYear = geminiYear || itunesYear;
+        const finalTrackCount = geminiTrackCount || itunesTrackCount;
+        const finalGenre = geminiGenre || itunesGenre;
+        const finalLabel = geminiLabel || itunesLabel;
+
+        // Generate description - use Gemini description if available
+        let description = null;
+        if (geminiDescription && geminiDescription.length > 10) {
+          description = geminiDescription;
+          console.log(`✅ Using Gemini album description`);
+        } else if (finalYear && finalTrackCount) {
+          description = `An album by ${cleanedArtist} featuring ${finalTrackCount} tracks. Released in ${finalYear}${finalGenre ? ` under the ${finalGenre} genre` : ""}.`;
+        } else if (finalYear) {
+          description = `An album by ${cleanedArtist}, released in ${finalYear}.`;
+        } else if (finalTrackCount) {
+          description = `An album by ${cleanedArtist} featuring ${finalTrackCount} tracks.`;
+        } else {
+          description = `A collection of tracks by ${cleanedArtist}.`;
+        }
+
+        const result = {
+          title: albumName,
+          artist: cleanedArtist,
+          artworkUrl: currentArtworkUrl,
+          releaseDate: finalYear,
+          trackCount: finalTrackCount,
+          genre: finalGenre,
+          genres: finalGenre ? [finalGenre] : [],
+          label: finalLabel,
+          description: description,
+        };
+
+        // Cache the result
+        albumContextCache.set(cacheKey, result);
+        console.log(`💾 Cached album context for: ${albumName}`);
+
+        if (albumContextCache.size > 20) {
+          const firstKey = albumContextCache.keys().next().value;
+          albumContextCache.delete(firstKey);
+        }
+
+        return result;
+      } catch (error) {
+        if (error.name === "AbortError") {
+          console.log("Album context fetch cancelled");
+          return null;
+        }
+        console.error("❌ Error fetching album context:", error);
+        return null;
+      }
+    }
+
+    function showAlbumContextLoader() {
+      const skeleton = document.getElementById("albumContextSkeleton");
+      const content = document.getElementById("albumContextContent");
+
+      console.log('💿 Showing album context loader...');
+
+      // Show skeleton, hide content
+      if (skeleton) {
+        skeleton.classList.remove("hidden");
+      }
+      if (content) {
+        content.classList.remove("visible");
+      }
+    }
+
+    function renderAlbumContext(albumData) {
+      const container = document.getElementById("albumContext");
+      const skeleton = document.getElementById("albumContextSkeleton");
+      const content = document.getElementById("albumContextContent");
+
+      console.log(
+        "🎨 renderAlbumContext called with:",
+        albumData ? "data present" : "null"
+      );
+
+      if (!albumData) {
+        // No album data - hide everything
+        console.log("   Hiding album context (no data)");
+        skeleton.classList.add("hidden");
+        content.classList.remove("visible");
+        return;
+      }
+
+      // We have album data - hide skeleton and show content
+      console.log("   Showing album context for:", albumData.title);
+      if (skeleton) {
+        skeleton.classList.add("hidden");
+      }
+      if (content) {
+        content.classList.add("visible");
+        console.log("   ✅ albumContextContent now has 'visible' class");
+      }
+
+      const art = document.getElementById("albumContextArt");
+      art.src = albumData.artworkUrl;
+      art.onerror = () => {
+        art.src = "https://placehold.co/200x200/333/999?text=No+Image";
+      };
+
+      document.getElementById("albumContextTitle").textContent =
+        albumData.title;
+
+      // Build artist line with year and track count inline
+      let artistLine = albumData.artist;
+      let metaInfo = [];
+
+      if (albumData.releaseDate) {
+        metaInfo.push(albumData.releaseDate);
+      }
+
+      if (albumData.trackCount) {
+        metaInfo.push(`${albumData.trackCount} tracks`);
+      }
+
+      if (metaInfo.length > 0) {
+        artistLine += ` • ${metaInfo.join(" • ")}`;
+      }
+
+      document.getElementById("albumContextArtist").textContent = artistLine;
+      console.log("   Artist line:", artistLine);
+
+      // Helper function to capitalize genre names properly
+      function capitalizeGenre(genre) {
+        // Special cases
+        const specialCases = {
+          'hip hop': 'Hip-Hop',
+          'r&b': 'R&B',
+          'r&b/soul': 'R&B/Soul',
+          'edm': 'EDM',
+          'uk': 'UK',
+          'dj': 'DJ',
+        };
+
+        const lower = genre.toLowerCase();
+        if (specialCases[lower]) {
+          return specialCases[lower];
+        }
+
+        // Capitalize first letter of each word
+        return genre.split(' ')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+          .join(' ');
+      }
+
+      // Show label in meta container
+      const metaContainer = document.getElementById("albumMeta");
+      if (albumData.label) {
+        const labelText = albumData.label.includes('℗') ? albumData.label : `℗ ${albumData.label}`;
+        metaContainer.innerHTML = `<span>${escapeHtml(labelText)}</span>`;
+        console.log("   Label:", albumData.label);
+      } else {
+        metaContainer.innerHTML = "";
+      }
+
+      const genresContainer = document.getElementById("albumGenres");
+      if (albumData.genre) {
+        genresContainer.innerHTML = `<div class="genre-tag">${escapeHtml(capitalizeGenre(albumData.genre))}</div>`;
+        console.log("   Genre:", albumData.genre);
+      } else {
+        genresContainer.innerHTML = "";
+      }
+
+      const descContainer = document.getElementById("albumDescription");
+      if (albumData.description) {
+        descContainer.innerHTML = `<p style="margin-bottom: 12px;">${escapeHtml(
+          albumData.description
+        )}</p>`;
+
+        // Add "Read more" link if we have a Last.fm URL
+        if (albumData.lastfmUrl) {
+          descContainer.innerHTML += `<p style="margin-top: 8px; margin-bottom: 12px;"><a href="${albumData.lastfmUrl}" target="_blank" class="artist-bio-link">Read more <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: -2px; margin-left: 2px;"><path fill-rule="evenodd" d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5"/><path fill-rule="evenodd" d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0z"/></svg></a></p>`;
+        }
+
+        if (albumData.copyright) {
+          descContainer.innerHTML += `<p style="opacity: 0.5; font-size: 13px; font-style: italic;">${escapeHtml(
+            albumData.copyright
+          )}</p>`;
+        }
+        console.log(
+          "   Description set, length:",
+          albumData.description.length
+        );
+      } else if (albumData.lastfmUrl) {
+        // No description but have Last.fm URL - show read more link
+        descContainer.innerHTML = `<p style="margin-bottom: 12px;"><a href="${albumData.lastfmUrl}" target="_blank" class="artist-bio-link">Read more <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: -2px; margin-left: 2px;"><path fill-rule="evenodd" d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5"/><path fill-rule="evenodd" d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0z"/></svg></a></p>`;
+        if (albumData.copyright) {
+          descContainer.innerHTML += `<p style="opacity: 0.5; font-size: 13px; font-style: italic;">${escapeHtml(
+            albumData.copyright
+          )}</p>`;
+        }
+      } else if (albumData.copyright) {
+        descContainer.textContent = albumData.copyright;
+      } else {
+        descContainer.textContent =
+          "No additional information available for this album.";
+      }
+
+      console.log("   ✅ Album context render complete!");
+    }
+
+    // ========== Artist Context Management ==========
+    let currentArtistContext = null;
+    let currentArtistFetchController = null;
+
+    // Cache artist context by artist name
+    const artistContextCache = new Map();
+
+    function getArtistCacheKey(artistName) {
+      return artistName?.toLowerCase().trim();
+    }
+
+    async function fetchArtistContext(artistName, geminiData = {}) {
+      // Cancel previous fetch if still running
+      if (currentArtistFetchController) {
+        currentArtistFetchController.abort();
+      }
+      currentArtistFetchController = new AbortController();
+
+      if (!artistName) {
+        console.log("Missing artist info");
+        return null;
+      }
+
+      // Extract Gemini artistBio if provided
+      const geminiArtistBio = geminiData.artistBio || null;
+      if (geminiArtistBio) {
+        console.log("✅ Using Gemini artistBio as primary source");
+      }
+
+      // Clean artist name (remove features, etc.)
+      const cleanedArtist = artistName.split(/[,&]|\bfeat\.?|\bft\.?|\bwith\b/i)[0].trim();
+
+      // Check cache first
+      const cacheKey = getArtistCacheKey(cleanedArtist);
+      if (artistContextCache.has(cacheKey)) {
+        console.log(`📋 Using cached artist context for: ${cleanedArtist}`);
+        return artistContextCache.get(cacheKey);
+      }
+
+      console.log(`🎤 Fetching artist context for: ${cleanedArtist}`);
+
+      try {
+        let mbArtistId = null;
+        let mbArtistType = null;
+        let mbCountry = null;
+        let mbBeginArea = null;
+        let mbLifeSpan = null;
+        let mbTags = [];
+
+        // ========== Search MusicBrainz for artist ==========
+        try {
+          const mbSearchUrl = `https://musicbrainz.org/ws/2/artist?query=artist:"${encodeURIComponent(cleanedArtist)}"&limit=5&fmt=json`;
+          const mbSearchResponse = await fetch(mbSearchUrl, {
+            signal: currentArtistFetchController.signal,
+            headers: {
+              'User-Agent': 'Livia/1.0 (https://livia.mom)',
+            },
+          });
+          const mbSearchData = await mbSearchResponse.json();
+
+          if (mbSearchData.artists?.length > 0) {
+            // Find best match
+            let bestMatch = null;
+            let highestScore = 0;
+
+            for (const artist of mbSearchData.artists) {
+              let score = artist.score || 0;
+              const artistLower = artist.name.toLowerCase().trim();
+              const searchLower = cleanedArtist.toLowerCase().trim();
+
+              if (artistLower === searchLower) {
+                score += 100;
+              } else if (artistLower.includes(searchLower) || searchLower.includes(artistLower)) {
+                score += 50;
+              }
+
+              if (score > highestScore) {
+                highestScore = score;
+                bestMatch = artist;
+              }
+            }
+
+            if (bestMatch && highestScore >= 50) {
+              mbArtistId = bestMatch.id;
+              mbArtistType = bestMatch.type;
+              mbCountry = bestMatch.country;
+              mbBeginArea = bestMatch['begin-area']?.name;
+              mbLifeSpan = bestMatch['life-span'];
+              mbTags = bestMatch.tags?.slice(0, 5).map(t => t.name) || [];
+              console.log(`✅ MusicBrainz artist: ${bestMatch.name} (ID: ${mbArtistId})`);
+            }
+          }
+        } catch (err) {
+          if (err.name === 'AbortError') throw err;
+          console.log('⚠️ MusicBrainz artist search failed:', err);
+        }
+
+        // ========== Fetch Last.fm artist info for bio and image ==========
+        let lastfmBio = null;
+        let lastfmSummary = null;
+        let lastfmImage = null;
+        let lastfmListeners = null;
+        let lastfmPlaycount = null;
+        let lastfmTags = [];
+        let lastfmUrl = null;
+
+        try {
+          // Last.fm API key for Livia
+          const lastfmApiKey = 'd46e4b5b41f47257307e0852fefdd5b0';
+          const lastfmUrl_api = `https://ws.audioscrobbler.com/2.0/?method=artist.getinfo&artist=${encodeURIComponent(cleanedArtist)}&api_key=${lastfmApiKey}&format=json`;
+
+          console.log(`🔍 Fetching Last.fm artist info for: ${cleanedArtist}`);
+
+          const lastfmResponse = await fetch(lastfmUrl_api, {
+            signal: currentArtistFetchController.signal,
+          });
+          const lastfmData = await lastfmResponse.json();
+
+          if (lastfmData.artist) {
+            const artist = lastfmData.artist;
+
+            // Get bio
+            if (artist.bio) {
+              lastfmSummary = artist.bio.summary;
+              lastfmBio = artist.bio.content;
+
+              // Clean up the bio (remove HTML links and excessive whitespace)
+              if (lastfmSummary) {
+                lastfmSummary = lastfmSummary
+                  .replace(/<a[^>]*>Read more on Last\.fm<\/a>/gi, '')
+                  .replace(/<[^>]+>/g, '')
+                  .trim();
+              }
+            }
+
+            // Get image (prefer extralarge or large)
+            if (artist.image?.length > 0) {
+              const images = artist.image;
+              lastfmImage = images.find(i => i.size === 'extralarge')?.['#text'] ||
+                images.find(i => i.size === 'large')?.['#text'] ||
+                images.find(i => i.size === 'medium')?.['#text'] ||
+                images[images.length - 1]?.['#text'];
+
+              // Filter out default/placeholder images
+              if (lastfmImage && (lastfmImage.includes('2a96cbd8b46e442fc41c2b86b821562f') || !lastfmImage)) {
+                lastfmImage = null;
+              }
+            }
+
+            // Get stats
+            if (artist.stats) {
+              lastfmListeners = parseInt(artist.stats.listeners) || null;
+              lastfmPlaycount = parseInt(artist.stats.playcount) || null;
+            }
+
+            // Get tags
+            if (artist.tags?.tag?.length > 0) {
+              lastfmTags = artist.tags.tag.slice(0, 5).map(t => t.name);
+            }
+
+            // Get URL
+            lastfmUrl = artist.url;
+
+            console.log(`✅ Last.fm artist info: ${artist.name}`);
+            if (lastfmImage) console.log(`✅ Last.fm artist image found`);
+            if (lastfmListeners) console.log(`✅ Last.fm listeners: ${lastfmListeners.toLocaleString()}`);
+          }
+        } catch (err) {
+          if (err.name === 'AbortError') throw err;
+          console.log('⚠️ Last.fm artist info failed:', err);
+        }
+
+        // ========== Fallback: Search for artist image via Deezer (using CORS proxy) ==========
+        let deezerImage = null;
+        if (!lastfmImage) {
+          try {
+            const deezerQuery = encodeURIComponent(cleanedArtist);
+            const deezerApiUrl = `https://api.deezer.com/search/artist?q=${deezerQuery}&limit=5`;
+
+            // Try multiple CORS proxies in case one fails
+            // Note: Using JSONP approach first as Deezer supports it, then fallback to proxies
+            const corsProxies = [
+              // corsproxy.io tends to be most reliable
+              (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+              // cors-anywhere-style proxy
+              (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+              // Alternative proxy
+              (url) => `https://thingproxy.freeboard.io/fetch/${url}`,
+            ];
+
+            console.log(`🔍 Searching Deezer for artist image: ${cleanedArtist}`);
+
+            let deezerData = null;
+            for (const proxyFn of corsProxies) {
+              try {
+                const proxyUrl = proxyFn(deezerApiUrl);
+                const deezerResponse = await fetch(proxyUrl, {
+                  signal: currentArtistFetchController.signal,
+                  mode: 'cors',
+                  headers: {
+                    'Accept': 'application/json',
+                  }
+                });
+                if (deezerResponse.ok) {
+                  const text = await deezerResponse.text();
+                  try {
+                    deezerData = JSON.parse(text);
+                    if (deezerData.data) {
+                      console.log('✅ Deezer proxy succeeded');
+                      break;  // Success!
+                    }
+                  } catch (parseErr) {
+                    console.log('⚠️ Failed to parse Deezer response');
+                    continue;
+                  }
+                }
+              } catch (proxyErr) {
+                if (proxyErr.name === 'AbortError') throw proxyErr;
+                console.log('⚠️ CORS proxy failed, trying next...');
+                continue;
+              }
+            }
+
+            if (deezerData?.data?.length > 0) {
+              // Find best match
+              let bestMatch = null;
+              let highestScore = 0;
+
+              for (const result of deezerData.data) {
+                const resultName = result.name?.toLowerCase().trim();
+                const searchName = cleanedArtist.toLowerCase().trim();
+                let score = 0;
+
+                if (resultName === searchName) {
+                  score = 100;
+                } else if (resultName?.includes(searchName) || searchName.includes(resultName)) {
+                  score = 50;
+                }
+
+                // Prefer artists with more fans
+                if (result.nb_fan) {
+                  score += Math.min(result.nb_fan / 100000, 30);
+                }
+
+                if (score > highestScore) {
+                  highestScore = score;
+                  bestMatch = result;
+                }
+              }
+
+              if (bestMatch && highestScore >= 50) {
+                // Deezer provides: picture_small, picture_medium, picture_big, picture_xl
+                deezerImage = bestMatch.picture_xl || bestMatch.picture_big || bestMatch.picture_medium;
+                console.log(`✅ Deezer artist image found: ${bestMatch.name}`);
+              }
+            }
+          } catch (err) {
+            if (err.name === 'AbortError') throw err;
+            console.log('⚠️ Deezer artist search failed:', err);
+          }
+        }
+
+        // ========== Fallback 2: Search for artist image via TheAudioDB (CORS-friendly) ==========
+        let audiodb_image = null;
+        if (!lastfmImage && !deezerImage) {
+          try {
+            const audiodbQuery = encodeURIComponent(cleanedArtist);
+            // TheAudioDB free API endpoint
+            const audiodbUrl = `https://www.theaudiodb.com/api/v1/json/2/search.php?s=${audiodbQuery}`;
+
+            console.log(`🔍 Searching TheAudioDB for artist image: ${cleanedArtist}`);
+
+            const audiodbResponse = await fetch(audiodbUrl, {
+              signal: currentArtistFetchController.signal,
+            });
+            const audiodbData = await audiodbResponse.json();
+
+            if (audiodbData.artists?.length > 0) {
+              // Find best match
+              let bestMatch = null;
+              let highestScore = 0;
+
+              for (const result of audiodbData.artists) {
+                const resultName = result.strArtist?.toLowerCase().trim();
+                const searchName = cleanedArtist.toLowerCase().trim();
+                let score = 0;
+
+                if (resultName === searchName) {
+                  score = 100;
+                } else if (resultName?.includes(searchName) || searchName.includes(resultName)) {
+                  score = 50;
+                }
+
+                if (score > highestScore) {
+                  highestScore = score;
+                  bestMatch = result;
+                }
+              }
+
+              if (bestMatch && highestScore >= 50) {
+                // TheAudioDB provides multiple image options
+                audiodb_image = bestMatch.strArtistThumb ||
+                  bestMatch.strArtistFanart ||
+                  bestMatch.strArtistFanart2 ||
+                  bestMatch.strArtistClearart;
+                if (audiodb_image) {
+                  console.log(`✅ TheAudioDB artist image found: ${bestMatch.strArtist}`);
+                }
+              }
+            }
+          } catch (err) {
+            if (err.name === 'AbortError') throw err;
+            console.log('⚠️ TheAudioDB artist search failed:', err);
+          }
+        }
+
+        // ========== Fallback 3: Use MusicBrainz artist image relations ==========
+        let mbImage = null;
+        if (!lastfmImage && !deezerImage && !audiodb_image && mbArtistId) {
+          try {
+            // Fetch artist with URL relations to find image links
+            const mbArtistUrl = `https://musicbrainz.org/ws/2/artist/${mbArtistId}?inc=url-rels&fmt=json`;
+
+            console.log(`🔍 Checking MusicBrainz for artist image relations: ${cleanedArtist}`);
+
+            const mbArtistResponse = await fetch(mbArtistUrl, {
+              signal: currentArtistFetchController.signal,
+              headers: {
+                'User-Agent': 'Livia/1.0 (https://livia.mom)',
+              },
+            });
+
+            if (mbArtistResponse.ok) {
+              const mbArtistData = await mbArtistResponse.json();
+
+              // Look for image relationships
+              if (mbArtistData.relations?.length > 0) {
+                for (const rel of mbArtistData.relations) {
+                  if (rel.type === 'image' && rel.url?.resource) {
+                    // Check if it's a Wikimedia Commons image we can use
+                    const imageUrl = rel.url.resource;
+                    if (imageUrl.includes('commons.wikimedia.org')) {
+                      // Convert to direct image URL
+                      const filename = imageUrl.split('/').pop();
+                      if (filename) {
+                        mbImage = `https://commons.wikimedia.org/wiki/Special:FilePath/${filename}?width=500`;
+                        console.log(`✅ MusicBrainz/Wikimedia artist image found`);
+                        break;
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          } catch (err) {
+            if (err.name === 'AbortError') throw err;
+            console.log('⚠️ MusicBrainz artist image fetch failed:', err);
+          }
+        }
+
+        // Combine tags from both sources
+        const combinedTags = [...new Set([...lastfmTags, ...mbTags])].slice(0, 5);
+
+        // Build the result object
+        // Bio priority: Gemini > Last.fm summary
+        // Image priority: Deezer > TheAudioDB > MusicBrainz/Wikimedia > Last.fm
+        const result = {
+          name: cleanedArtist,
+          type: mbArtistType || 'Artist',
+          imageUrl: deezerImage || audiodb_image || mbImage || lastfmImage,
+          country: mbCountry,
+          beginArea: mbBeginArea,
+          lifeSpan: mbLifeSpan,
+          listeners: lastfmListeners,
+          playcount: lastfmPlaycount,
+          bio: geminiArtistBio || lastfmSummary || null,
+          fullBio: geminiArtistBio || lastfmBio || null,
+          tags: combinedTags,
+          lastfmUrl: lastfmUrl,
+          musicbrainzId: mbArtistId,
+        };
+
+        // Cache the result
+        artistContextCache.set(cacheKey, result);
+        console.log(`💾 Cached artist context for: ${cleanedArtist}`);
+
+        // Keep cache size reasonable (max 30 artists)
+        if (artistContextCache.size > 30) {
+          const firstKey = artistContextCache.keys().next().value;
+          artistContextCache.delete(firstKey);
+        }
+
+        return result;
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          console.log('Artist context fetch cancelled');
+          return null;
+        }
+        console.error('❌ Error fetching artist context:', error);
+        return null;
+      }
+    }
+
+    function showArtistContextLoader() {
+      const skeleton = document.getElementById('artistContextSkeleton');
+      const content = document.getElementById('artistContextContent');
+
+      console.log('🎤 Showing artist context loader...');
+
+      // Show skeleton, hide content
+      if (skeleton) {
+        skeleton.classList.remove('hidden');
+      }
+      if (content) {
+        content.classList.remove('visible');
+      }
+    }
+
+    function renderArtistContext(artistData) {
+      const container = document.getElementById('artistContext');
+      const skeleton = document.getElementById('artistContextSkeleton');
+      const content = document.getElementById('artistContextContent');
+
+      console.log('🎤 renderArtistContext called with:', artistData ? 'data present' : 'null');
+
+      if (!artistData) {
+        // No artist data - hide everything
+        console.log('   Hiding artist context (no data)');
+        skeleton.classList.add('hidden');
+        content.classList.remove('visible');
+        return;
+      }
+
+      // We have artist data - hide skeleton and show content
+      console.log('   Showing artist context for:', artistData.name);
+      if (skeleton) {
+        skeleton.classList.add('hidden');
+      }
+      if (content) {
+        content.classList.add('visible');
+        console.log('   ✅ artistContextContent now has visible class');
+      }
+
+      // Set artist image
+      const img = document.getElementById('artistContextImage');
+      if (artistData.imageUrl) {
+        img.src = artistData.imageUrl;
+        img.onerror = () => {
+          img.src = 'https://placehold.co/180x180/333/999?text=' + encodeURIComponent(artistData.name.charAt(0).toUpperCase());
+        };
+      } else {
+        // Use a placeholder with artist initial
+        img.src = 'https://placehold.co/180x180/333/999?text=' + encodeURIComponent(artistData.name.charAt(0).toUpperCase());
+      }
+
+      // Set artist name
+      document.getElementById('artistContextName').textContent = artistData.name;
+
+      // Set artist type
+      const typeEl = document.getElementById('artistContextType');
+      if (artistData.type) {
+        typeEl.textContent = artistData.type === 'Group' ? 'Band / Group' : 'Artist';
+      } else {
+        typeEl.textContent = 'Artist';
+      }
+
+      // Show verified badge for popular artists
+      const badge = document.getElementById('artistVerifiedBadge');
+      if (artistData.listeners && artistData.listeners > 500000) {
+        badge.style.display = 'flex';
+      } else {
+        badge.style.display = 'none';
+      }
+
+      // Format large numbers
+      function formatNumber(num) {
+        if (!num) return null;
+        if (num >= 1000000000) {
+          return (num / 1000000000).toFixed(1) + 'B';
+        }
+        if (num >= 1000000) {
+          return (num / 1000000).toFixed(1) + 'M';
+        }
+        if (num >= 1000) {
+          return (num / 1000).toFixed(1) + 'K';
+        }
+        return num.toLocaleString();
+      }
+
+      // Build stats
+      const statsContainer = document.getElementById('artistStats');
+      let statsHtml = '';
+
+      if (artistData.listeners) {
+        statsHtml += `
+          <div class="artist-stat">
+            <span class="artist-stat-value">${formatNumber(artistData.listeners)}</span>
+            <span class="artist-stat-label">Listeners</span>
+          </div>
+        `;
+      }
+
+      if (artistData.playcount) {
+        statsHtml += `
+          <div class="artist-stat">
+            <span class="artist-stat-value">${formatNumber(artistData.playcount)}</span>
+            <span class="artist-stat-label">Scrobbles</span>
+          </div>
+        `;
+      }
+
+      statsContainer.innerHTML = statsHtml;
+
+      // Build tags
+      const tagsContainer = document.getElementById('artistTags');
+      if (artistData.tags && artistData.tags.length > 0) {
+        tagsContainer.innerHTML = artistData.tags
+          .map(tag => `<span class="artist-tag">${escapeHtml(capitalizeGenre(tag))}</span>`)
+          .join('');
+      } else {
+        tagsContainer.innerHTML = '';
+      }
+
+      // Helper function to capitalize genre tags
+      function capitalizeGenre(genre) {
+        if (!genre) return '';
+        const specialCases = {
+          'hip-hop': 'Hip-Hop',
+          'hip hop': 'Hip-Hop',
+          'r&b': 'R&B',
+          'edm': 'EDM',
+          'uk': 'UK',
+          'dj': 'DJ',
+          'pop': 'Pop',
+          'rock': 'Rock',
+          'jazz': 'Jazz',
+          'indie': 'Indie',
+          'electronic': 'Electronic',
+        };
+        const lower = genre.toLowerCase();
+        if (specialCases[lower]) return specialCases[lower];
+        return genre.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+      }
+
+      // Set bio
+      const bioContainer = document.getElementById('artistBio');
+      if (artistData.bio) {
+        // Truncate bio if too long
+        let bioText = artistData.bio;
+        if (bioText.length > 500) {
+          bioText = bioText.substring(0, 500).trim() + '...';
+        }
+        bioContainer.innerHTML = `<p>${escapeHtml(bioText)}</p>`;
+
+        // Add "Read more" link if we have a Last.fm URL
+        if (artistData.lastfmUrl) {
+          bioContainer.innerHTML += `<p style="margin-top: 8px;"><a href="${artistData.lastfmUrl}" target="_blank" class="artist-bio-link">Read more <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: -2px; margin-left: 2px;"><path fill-rule="evenodd" d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5"/><path fill-rule="evenodd" d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0z"/></svg></a></p>`;
+        }
+      } else {
+        bioContainer.innerHTML = '<p>No biography available for this artist.</p>';
+      }
+
+      // Build meta info
+      const metaContainer = document.getElementById('artistMeta');
+      let metaHtml = '';
+
+      if (artistData.country) {
+        metaHtml += `
+          <span class="artist-meta-item">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 103 9c0 3.492 1.698 5.988 3.355 7.584a13.731 13.731 0 002.273 1.765 11.842 11.842 0 00.976.544l.062.029.018.008.006.003zM10 11.25a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5z" clip-rule="evenodd" />
+            </svg>
+            ${artistData.country}
+          </span>
+        `;
+      }
+
+      if (artistData.beginArea) {
+        metaHtml += `
+          <span class="artist-meta-item">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M10 8a3 3 0 100-6 3 3 0 000 6zM3.465 14.493a1.23 1.23 0 00.41 1.412A9.957 9.957 0 0010 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.408-1.41a7.002 7.002 0 00-13.074.003z" />
+            </svg>
+            From ${artistData.beginArea}
+          </span>
+        `;
+      }
+
+      if (artistData.lifeSpan?.begin) {
+        const startYear = artistData.lifeSpan.begin.split('-')[0];
+        const endYear = artistData.lifeSpan.end ? artistData.lifeSpan.end.split('-')[0] : 'Present';
+        metaHtml += `
+          <span class="artist-meta-item">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M5.75 2a.75.75 0 01.75.75V4h7V2.75a.75.75 0 011.5 0V4h.25A2.75 2.75 0 0118 6.75v8.5A2.75 2.75 0 0115.25 18H4.75A2.75 2.75 0 012 15.25v-8.5A2.75 2.75 0 014.75 4H5V2.75A.75.75 0 015.75 2zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75z" clip-rule="evenodd" />
+            </svg>
+            ${startYear} – ${endYear}
+          </span>
+        `;
+      }
+
+      metaContainer.innerHTML = metaHtml;
+
+      console.log('   ✅ Artist context render complete!');
+    }
+
+    function getAverageColor(img) {
+      try {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+
+        ctx.drawImage(img, 0, 0);
+
+        const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+
+        let r = 0,
+          g = 0,
+          b = 0,
+          count = 0;
+
+        for (let i = 0; i < data.length; i += 40) {
+          r += data[i];
+          g += data[i + 1];
+          b += data[i + 2];
+          count++;
+        }
+
+        return {
+          r: Math.floor(r / count),
+          g: Math.floor(g / count),
+          b: Math.floor(b / count),
+        };
+      } catch (err) {
+        console.error("Error extracting color:", err);
+        return { r: 50, g: 50, b: 50 };
+      }
+    }
+
+    function applyAlbumGradient(imageUrl) {
+      const primary = document.getElementById("bg-artwork-primary");
+      const secondary = document.getElementById("bg-artwork-secondary");
+      const tertiary = document.getElementById("bg-artwork-tertiary");
+
+      // Remove loaded class for fade transition
+      primary.classList.remove("loaded");
+      secondary.classList.remove("loaded");
+      tertiary.classList.remove("loaded");
+
+      // Use artworkManager's preload (leverages cache if already loaded)
+      artworkManager.preload(imageUrl)
+        .then(() => {
+          // Apply the album art as background to all layers
+          const bgUrl = `url('${imageUrl}')`;
+          primary.style.backgroundImage = bgUrl;
+          secondary.style.backgroundImage = bgUrl;
+          tertiary.style.backgroundImage = bgUrl;
+
+          // Trigger the fade-in with staggered timing
+          requestAnimationFrame(() => {
+            primary.classList.add("loaded");
+            setTimeout(() => secondary.classList.add("loaded"), 100);
+            setTimeout(() => tertiary.classList.add("loaded"), 200);
+          });
+
+          console.log("🎨 Apple Music background applied");
+        })
+        .catch(() => {
+          console.error("Failed to load album art for background");
+          // Reset to black on error
+          primary.style.backgroundImage = "none";
+          secondary.style.backgroundImage = "none";
+          tertiary.style.backgroundImage = "none";
+        });
+    }
+
+    function formatTime(seconds) {
+      if (!seconds || isNaN(seconds)) return "0:00";
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${mins}:${secs.toString().padStart(2, "0")}`;
+    }
+
+    // Store current user info from session
+    let currentUser = null;
+    
+    function updateUserInfo(user) {
+      const avatarEl = document.getElementById("userAvatar");
+      const userIdEl = document.getElementById("userId");
+      
+      if (user && user.displayName) {
+        currentUser = user;
+        
+        // Update avatar
+        if (user.avatarUrl) {
+          avatarEl.src = user.avatarUrl;
+          avatarEl.style.display = "block";
+          avatarEl.onerror = () => {
+            // Fallback to default Discord avatar on error
+            avatarEl.src = "https://cdn.discordapp.com/embed/avatars/0.png";
+          };
+        } else {
+          avatarEl.src = "https://cdn.discordapp.com/embed/avatars/0.png";
+          avatarEl.style.display = "block";
+        }
+        
+        // Update username display
+        userIdEl.textContent = `${user.displayName}'s activity`;
+      } else {
+        // No user info - show generic text
+        avatarEl.style.display = "none";
+        userIdEl.textContent = "Music Activity";
+      }
+    }
+    
+    function getUserDisplayName() {
+      return currentUser?.displayName || "User";
+    }
+
+    function updateSessionStatus(data) {
+      const statusBadge = document.getElementById("statusBadge");
+      const progressFill = document.getElementById("progressFill");
+      const lyricsLines = document.querySelectorAll(".lyric-line");
+      
+      // Update user info if available in data
+      if (data.user) {
+        updateUserInfo(data.user);
+      }
+      
+      const userName = getUserDisplayName();
+
+      if (data.status === "playing") {
+        statusBadge.style.display = "none";
+        artworkManager.setInactive(false);
+        progressFill.classList.remove("inactive");
+        lyricsLines.forEach((line) => line.classList.remove("inactive"));
+      } else if (data.status === "paused") {
+        statusBadge.style.display = "inline-block";
+        statusBadge.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pause" viewBox="0 0 16 16">
+  <path d="M6 3.5a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5m4 0a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5"/>
+</svg> ${userName} has paused`;
+        statusBadge.className = "status-badge paused";
+        artworkManager.setInactive(true);
+        progressFill.classList.add("inactive");
+        lyricsLines.forEach((line) => line.classList.add("inactive"));
+      } else {
+        statusBadge.style.display = "inline-block";
+        statusBadge.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-stop-circle-fill" viewBox="0 0 16 16">
+  <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M6.5 5A1.5 1.5 0 0 0 5 6.5v3A1.5 1.5 0 0 0 6.5 11h3A1.5 1.5 0 0 0 11 9.5v-3A1.5 1.5 0 0 0 9.5 5z"/>
+</svg> ${userName} has stopped listening`;
+        statusBadge.className = "status-badge stopped";
+        artworkManager.setInactive(true);
+        progressFill.classList.add("inactive");
+        lyricsLines.forEach((line) => line.classList.add("inactive"));
+
+        progressFill.style.width = "0%";
+        document.getElementById("currentTime").textContent = "0:00";
+      }
+    }
+
+    // FIX: Calculate position based on server sync time instead of incremental
+    function updateProgress() {
+      if (!isPlaying) {
+        return;
+      }
+
+      const now = Date.now();
+      const elapsedSinceSync = (now - lastSyncTimestamp) / 1000;
+      localPlaybackTime = lastServerPosition + elapsedSinceSync;
+
+      // Clamp to duration
+      if (songDuration > 0) {
+        localPlaybackTime = Math.min(localPlaybackTime, songDuration);
+      }
+
+      document.getElementById("currentTime").textContent =
+        formatTime(localPlaybackTime);
+
+      if (songDuration && songDuration > 0) {
+        const percent = Math.min(
+          (localPlaybackTime / songDuration) * 100,
+          100
+        );
+        document.getElementById("progressFill").style.width = percent + "%";
+
+        const remaining = songDuration - localPlaybackTime;
+        document.getElementById("remainingTime").textContent =
+          "-" + formatTime(Math.max(0, remaining));
+      }
+
+      // FIX: Update lyrics with properly synced time
+      updateLyrics(localPlaybackTime);
+    }
+
+    function parseLRC(lrcString) {
+      if (!lrcString) return [];
+
+      const lines = lrcString.split("\n");
+      const lyrics = [];
+
+      lines.forEach((line) => {
+        const match = line.match(/\[(\d{2}):(\d{2})(?:\.(\d{2}))?\](.*)/);
+        if (match) {
+          const minutes = parseInt(match[1]);
+          const seconds = parseInt(match[2]);
+          const centiseconds = match[3] ? parseInt(match[3]) : 0;
+          const text = match[4].trim();
+
+          const time = minutes * 60 + seconds + centiseconds / 100;
+          lyrics.push({ time, text });
+        }
+      });
+
+      return lyrics.sort((a, b) => a.time - b.time);
+    }
+
+    // ========== STANDS4 API Configuration ==========
+    // NOTE: Replace these with your actual STANDS4 API credentials from https://www.stands4.com/services/
+    const STANDS4_UID = "13634"; // Replace with your STANDS4 user ID
+    const STANDS4_TOKEN = "f0ZgpKpwI4PxoaRY"; // Replace with your STANDS4 token
+
+    async function fetchLyrics(
+      trackName,
+      artistName,
+      albumName,
+      durationSeconds
+    ) {
+      // Cancel previous fetch if still running
+      if (currentLyricsFetchController) {
+        currentLyricsFetchController.abort();
+      }
+      currentLyricsFetchController = new AbortController();
+
+      try {
+        // Clean the inputs for better matching
+        const cleanedTrack = cleanSongTitle(trackName);
+        const cleanedArtist = cleanArtistName(artistName);
+
+        console.log("🔍 Searching lyrics:", {
+          original: { trackName, artistName },
+          cleaned: { trackName: cleanedTrack, artistName: cleanedArtist },
+          albumName,
+          duration: durationSeconds,
+        });
+
+        // ========== PRIMARY: STANDS4 Lyrics API ==========
+        const stands4Result = await fetchFromSTANDS4(
+          cleanedTrack,
+          cleanedArtist,
+          durationSeconds,
+          currentLyricsFetchController.signal
+        );
+
+        if (stands4Result && stands4Result.length > 0) {
+          console.log("✅ STANDS4: Found lyrics");
+          return stands4Result;
+        }
+
+        console.log("⚠️ STANDS4: No lyrics found, trying LRCLIB...");
+
+        // ========== FALLBACK: LRCLIB ==========
+        const lrclibResult = await fetchFromLRCLIB(
+          cleanedTrack,
+          cleanedArtist,
+          albumName,
+          durationSeconds,
+          currentLyricsFetchController.signal
+        );
+
+        if (lrclibResult && lrclibResult.length > 0) {
+          return lrclibResult;
+        }
+
+        console.warn("❌ No lyrics found from any source");
+        return [];
+      } catch (err) {
+        if (err.name === "AbortError") {
+          console.log("Lyrics fetch cancelled");
+          throw err; // Re-throw so .catch() handles it, not .then()
+        }
+        console.error("❌ Error fetching lyrics:", err);
+        return [];
+      }
+    }
+
+    // ========== STANDS4 Lyrics API (Primary) ==========
+    async function fetchFromSTANDS4(track, artist, duration, signal) {
+      try {
+        console.log("🎵 Trying STANDS4 Lyrics API...");
+
+        const params = new URLSearchParams({
+          uid: STANDS4_UID,
+          tokenid: STANDS4_TOKEN,
+          term: track,
+          artist: artist,
+          format: "json",
+        });
+
+        const response = await fetch(
+          `https://www.stands4.com/services/v2/lyrics.php?${params}`,
+          { signal }
+        );
+
+        if (!response.ok) {
+          console.log("⚠️ STANDS4: API request failed");
+          return null;
+        }
+
+        const data = await response.json();
+
+        if (!data.result || data.result.length === 0) {
+          console.log("⚠️ STANDS4: No results found");
+          return null;
+        }
+
+        // Find best matching result (prioritize exact artist match)
+        let bestMatch = data.result[0];
+        for (const result of data.result) {
+          if (
+            result.artist &&
+            result.artist.toLowerCase() === artist.toLowerCase()
+          ) {
+            bestMatch = result;
+            break;
+          }
+        }
+
+        console.log(
+          "🔗 STANDS4: Found match:",
+          bestMatch.song,
+          "-",
+          bestMatch.artist
+        );
+        console.log("🔗 Song link:", bestMatch["song-link"]);
+
+        // STANDS4 returns links to Lyrics.com, we need to fetch the actual lyrics
+        if (bestMatch["song-link"]) {
+          const lyrics = await fetchLyricsFromLyricsCom(
+            bestMatch["song-link"],
+            duration,
+            signal
+          );
+          return lyrics;
+        }
+
+        return null;
+      } catch (err) {
+        if (err.name === "AbortError") throw err;
+        console.log("⚠️ STANDS4 error:", err.message);
+        return null;
+      }
+    }
+
+    // Fetch actual lyrics content from Lyrics.com page
+    async function fetchLyricsFromLyricsCom(songLink, duration, signal) {
+      try {
+        console.log("📄 Fetching lyrics from Lyrics.com...");
+
+        // Use a CORS proxy since Lyrics.com doesn't allow direct cross-origin requests
+        // Try multiple proxies in case one fails
+        const corsProxies = [
+          (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+          (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+        ];
+
+        let html = null;
+        for (const proxyFn of corsProxies) {
+          try {
+            const proxyUrl = proxyFn(songLink);
+            const response = await fetch(proxyUrl, {
+              signal,
+              headers: {
+                Accept: "text/html",
+              },
+            });
+            if (response.ok) {
+              html = await response.text();
+              if (html) break;
+            }
+          } catch (proxyErr) {
+            console.log('⚠️ Lyrics CORS proxy failed, trying next...');
+            continue;
+          }
+        }
+
+        if (!html) {
+          console.log("⚠️ Could not fetch Lyrics.com page");
+          return null;
+        }
+
+        // Parse lyrics from the page
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, "text/html");
+
+        // Try different selectors that Lyrics.com uses
+        let lyricsElement = doc.querySelector("#lyric-body-text");
+        if (!lyricsElement) {
+          lyricsElement = doc.querySelector(".lyric-body");
+        }
+        if (!lyricsElement) {
+          lyricsElement = doc.querySelector("pre[id*='lyric']");
+        }
+
+        if (!lyricsElement) {
+          console.log("⚠️ Could not find lyrics element on page");
+          return null;
+        }
+
+        const plainLyrics =
+          lyricsElement.textContent || lyricsElement.innerText;
+
+        if (!plainLyrics || plainLyrics.trim().length === 0) {
+          console.log("⚠️ Lyrics element was empty");
+          return null;
+        }
+
+        console.log("✅ STANDS4/Lyrics.com: Got plain lyrics");
+
+        // Convert plain lyrics to timed lyrics (evenly distributed)
+        const lines = plainLyrics
+          .split("\n")
+          .map((line) => line.trim())
+          .filter((line) => line.length > 0);
+
+        if (lines.length === 0) {
+          return null;
+        }
+
+        const intervalPerLine = duration / lines.length;
+        return lines.map((text, i) => ({
+          time: i * intervalPerLine,
+          text,
+        }));
+      } catch (err) {
+        if (err.name === "AbortError") throw err;
+        console.log("⚠️ Lyrics.com fetch error:", err.message);
+        return null;
+      }
+    }
+
+    // ========== LRCLIB API (Fallback) ==========
+    async function fetchFromLRCLIB(track, artist, album, duration, signal) {
+      try {
+        console.log("🔍 Trying LRCLIB...");
+
+        // Try exact match first
+        let params = new URLSearchParams({
+          track_name: track,
+          artist_name: artist,
+          album_name: album || "",
+          duration: Math.round(duration),
+        });
+
+        let response = await fetch(`https://lrclib.net/api/get?${params}`, {
+          signal,
+        });
+
+        // Try without album if not found
+        if (!response.ok && album) {
+          console.log("⚠️ LRCLIB: Not found with album, trying without...");
+          params = new URLSearchParams({
+            track_name: track,
+            artist_name: artist,
+            duration: Math.round(duration),
+          });
+          response = await fetch(`https://lrclib.net/api/get?${params}`, {
+            signal,
+          });
+        }
+
+        // Try search as last resort
+        if (!response.ok) {
+          console.log("⚠️ LRCLIB: Exact match failed, trying search...");
+          const searchParams = new URLSearchParams({
+            q: `${track} ${artist}`,
+          });
+          const searchResponse = await fetch(
+            `https://lrclib.net/api/search?${searchParams}`,
+            { signal }
+          );
+
+          if (searchResponse.ok) {
+            const results = await searchResponse.json();
+            if (results && results.length > 0) {
+              const data = results[0];
+              console.log(
+                "✅ LRCLIB (search):",
+                data.trackName,
+                "-",
+                data.artistName
+              );
+
+              if (data.syncedLyrics) {
+                return parseLRC(data.syncedLyrics);
+              }
+              if (data.plainLyrics) {
+                const lines = data.plainLyrics
+                  .split("\n")
+                  .filter((line) => line.trim());
+                const intervalPerLine = duration / lines.length;
+                return lines.map((text, i) => ({
+                  time: i * intervalPerLine,
+                  text,
+                }));
+              }
+            }
+          }
+
+          return null;
+        }
+
+        const data = await response.json();
+        console.log("✅ LRCLIB:", data.trackName, "-", data.artistName);
+
+        if (data.syncedLyrics) {
+          console.log("🎵 LRCLIB: Using synced lyrics");
+          return parseLRC(data.syncedLyrics);
+        }
+
+        if (data.plainLyrics) {
+          console.log("📝 LRCLIB: Using plain lyrics (no sync)");
+          const lines = data.plainLyrics
+            .split("\n")
+            .filter((line) => line.trim());
+          const intervalPerLine = duration / lines.length;
+          return lines.map((text, i) => ({
+            time: i * intervalPerLine,
+            text,
+          }));
+        }
+
+        return null;
+      } catch (err) {
+        if (err.name === "AbortError") throw err;
+        console.log("⚠️ LRCLIB error:", err.message);
+        return null;
+      }
+    }
+
+    // Show loading animation while fetching lyrics
+    function showLyricsLoader() {
+      const container = document.getElementById("lyricsScroll");
+      container.innerHTML = `
+          <div class="lyrics-loader-wrapper">
+            <div class="lyrics-loader">
+              <div></div>
+              <div></div>
+              <div></div>
+              <div></div>
+              <div></div>
+            </div>
+          </div>
+        `;
+    }
+
+    function renderLyrics(lyricsData, isLoading = false) {
+      const container = document.getElementById("lyricsScroll");
+
+      // Reset tracking variables for new song
+      lastActiveIndex = -1;
+      lastScrollTarget = 0;
+
+      // If explicitly loading, show the loader
+      if (isLoading) {
+        showLyricsLoader();
+        return;
+      }
+
+      lyrics = lyricsData || [];
+
+      if (lyrics.length === 0) {
+        container.innerHTML =
+          '<div class="lyric-line" style="opacity: 0.5; padding-top: 250px;">No lyrics available</div>';
+        return;
+      }
+
+      // Dynamic padding based on container height for proper centering
+      const paddingTop = '<div class="lyrics-padding-top" style="height: 40%;"></div>';
+      const paddingBottom = '<div class="lyrics-padding-bottom" style="height: 60%;"></div>';
+
+      container.innerHTML =
+        paddingTop +
+        lyrics
+          .map(
+            (line, index) =>
+              `<div class="lyric-line upcoming" data-time="${line.time}" data-index="${index}">${escapeHtml(line.text)}</div>`
+          )
+          .join("") +
+        paddingBottom;
+
+      // Reset scroll position
+      container.style.transform = 'translateY(0)';
+    }
+
+    // Track last active index to avoid unnecessary DOM updates
+    let lastActiveIndex = -1;
+    let lastScrollTarget = 0;
+
+    function updateLyrics(currentSeconds) {
+      if (lyrics.length === 0) return;
+
+      const lines = document.querySelectorAll(".lyric-line[data-index]");
+      const scrollContainer = document.getElementById("lyricsScroll");
+      const container = document.getElementById("lyricsContainer");
+      let activeIndex = -1;
+
+      // Find the current active line
+      for (let i = lyrics.length - 1; i >= 0; i--) {
+        if (currentSeconds >= lyrics[i].time) {
+          activeIndex = i;
+          break;
+        }
+      }
+
+      // Handle case before first lyric
+      if (activeIndex === -1) {
+        lines.forEach((line) => {
+          line.classList.remove("active", "past", "upcoming", "near-active");
+          line.classList.add("upcoming");
+        });
+        const firstLine = lines[0];
+        if (firstLine) {
+          const containerHeight = container.offsetHeight;
+          const lineTop = firstLine.offsetTop;
+          const lineHeight = firstLine.offsetHeight;
+          const offset = lineTop - containerHeight / 2 + lineHeight / 2;
+          requestAnimationFrame(() => {
+            scrollContainer.style.transform = `translateY(-${offset}px)`;
+          });
+        }
+        lastActiveIndex = -1;
+        return;
+      }
+
+      // Only update classes if active index changed
+      if (activeIndex !== lastActiveIndex) {
+        let activeLine = null;
+
+        // Use requestAnimationFrame for class updates to batch DOM operations
+        requestAnimationFrame(() => {
+          lines.forEach((line) => {
+            const index = parseInt(line.getAttribute("data-index"));
+
+            // Remove all state classes
+            line.classList.remove("active", "past", "upcoming", "near-active");
+
+            if (index === activeIndex) {
+              line.classList.add("active");
+              activeLine = line;
+            } else if (index < activeIndex) {
+              // Past lines
+              line.classList.add("past");
+              if (activeIndex - index <= 2) {
+                line.classList.add("near-active");
+              }
+            } else {
+              // Upcoming lines
+              line.classList.add("upcoming");
+              if (index - activeIndex <= 2) {
+                line.classList.add("near-active");
+              }
+            }
+          });
+
+          // Calculate scroll position after class updates
+          if (activeLine) {
+            const containerHeight = container.offsetHeight;
+            const lineOffsetTop = activeLine.offsetTop;
+            const lineHeight = activeLine.offsetHeight;
+
+            // Position active line slightly above center for better readability
+            const targetOffset = lineOffsetTop - (containerHeight * 0.4) + (lineHeight / 2);
+
+            const currentTransform = parseFloat(scrollContainer.style.transform.replace(/[^0-9.-]/g, '')) || 0;
+            const diff = Math.abs(targetOffset - Math.abs(currentTransform));
+
+            // If large jump (song seek or new song), snap immediately
+            if (diff > containerHeight) {
+              scrollContainer.style.transition = 'none';
+              scrollContainer.style.transform = `translateY(-${targetOffset}px)`;
+              // Use double rAF for reliable transition reset
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                  scrollContainer.style.transition = 'transform 0.4s cubic-bezier(0.22, 0.61, 0.36, 1)';
+                });
+              });
+            } else {
+              scrollContainer.style.transform = `translateY(-${targetOffset}px)`;
+            }
+
+            lastScrollTarget = targetOffset;
+          }
+        });
+
+        lastActiveIndex = activeIndex;
+      }
+    }
+
+    async function pollSession() {
+      try {
+        const res = await fetch(`https://api.livia.mom/session/${sessionId}`);
+
+        if (!res.ok) {
+          if (res.status === 404) {
+            throw new Error("Session not found");
+          }
+          console.warn(
+            `Session fetch returned status ${res.status}, retrying...`
+          );
+          return;
+        }
+
+        const data = await res.json();
+        const previousSong = sessionData?.currentSong;
+        const previousAlbum = sessionData?.album;
+        const previousStatus = sessionData?.status;
+        sessionData = data;
+
+        console.log("📊 Session update:", data);
+
+        isPlaying = data.status === "playing";
+
+        // FIX: Check for position drift and resync if > 3 seconds
+        if (data.position !== undefined) {
+          const drift = Math.abs(localPlaybackTime - data.position);
+          if (drift > 3) {
+            console.warn(
+              `⚠️ Position drift detected: ${drift.toFixed(1)}s, resyncing...`
+            );
+          }
+          lastServerPosition = data.position;
+          lastSyncTimestamp = Date.now();
+          localPlaybackTime = lastServerPosition;
+          console.log(`⏱️ Synced position: ${lastServerPosition}s`);
+        }
+
+        if (data.duration !== undefined && data.duration > 0) {
+          songDuration = data.duration;
+        }
+
+        if (data.status === "stopped") {
+          lastServerPosition = 0;
+          localPlaybackTime = 0;
+          document.getElementById("currentTime").textContent = "0:00";
+          document.getElementById("remainingTime").textContent = "-0:00";
+          document.getElementById("progressFill").style.width = "0%";
+        }
+
+        if (data.currentSong) {
+          document.getElementById("songTitle").textContent = data.currentSong;
+          document.getElementById("artistName").textContent =
+            data.currentArtist || "";
+          document.getElementById("albumName").textContent = data.album
+            ? `from ${data.album}`
+            : "";
+
+          updatePlatformButtons(data.currentSong, data.currentArtist || "");
+
+          if (data.currentSong !== previousSong && data.currentSong) {
+            console.log("🎤 Song changed, fetching lyrics...");
+
+            const estimatedDuration = songDuration || 180;
+
+            // Clear old lyrics
+            lyrics = [];
+
+            // FIX: Transition FIRST so lyricsScroll becomes visible, THEN show loader
+            // This ensures the loader animation is visible to the user
+            if (isInitialLoad) {
+              isInitialLoad = false;
+              transitionToContent();
+            }
+
+            // Now show loading animation (lyricsScroll is guaranteed to be visible)
+            showLyricsLoader();
+
+            // Track when we started loading to ensure minimum display time
+            const loaderStartTime = Date.now();
+            const MIN_LOADER_TIME = 1000; // Show loader for at least 1000ms
+
+            // Fetch lyrics in background (non-blocking)
+            fetchLyrics(
+              data.currentSong,
+              data.currentArtist || "",
+              data.album || "",
+              estimatedDuration
+            )
+              .then(async (lyricsData) => {
+                // Only render if this is still the current song (avoid race conditions)
+                if (sessionData?.currentSong === data.currentSong) {
+                  // Ensure loader is visible for minimum time
+                  const elapsed = Date.now() - loaderStartTime;
+                  if (elapsed < MIN_LOADER_TIME) {
+                    await new Promise(r => setTimeout(r, MIN_LOADER_TIME - elapsed));
+                  }
+                  renderLyrics(lyricsData);
+                  console.log("✅ Lyrics loaded for:", data.currentSong);
+                }
+              })
+              .catch(async (err) => {
+                // Don't do anything if fetch was cancelled (song changed)
+                if (err.name === "AbortError") {
+                  console.log("Lyrics fetch cancelled, skipping render");
+                  return;
+                }
+
+                console.log("Lyrics fetch failed:", err);
+                // Show "no lyrics" on error
+                if (sessionData?.currentSong === data.currentSong) {
+                  // Ensure loader is visible for minimum time even on error
+                  const elapsed = Date.now() - loaderStartTime;
+                  if (elapsed < MIN_LOADER_TIME) {
+                    await new Promise(r => setTimeout(r, MIN_LOADER_TIME - elapsed));
+                  }
+                  renderLyrics([]);
+                }
+              });
+
+            // These updates happen immediately, not blocked by lyrics fetch
+            addToRecentlyPlayed(
+              data.currentSong,
+              data.currentArtist || "Unknown Artist",
+              data.albumArt || "",
+              data.album || ""
+            );
+
+            // Fetch album context in background (non-blocking)
+            if (data.album) {
+              console.log("💿 Fetching album context in background...");
+              // Show loading skeleton immediately while fetching
+              showAlbumContextLoader();
+              fetchAlbumContext(
+                data.album,
+                data.currentArtist || "",
+                data.albumArt || "",
+                {
+                  genre: data.genre,
+                  year: data.year,
+                  label: data.label,
+                  trackCount: data.trackCount,
+                  albumDescription: data.albumDescription,
+                  artistBio: data.artistBio
+                }
+              )
+                .then((albumContext) => {
+                  if (albumContext) {
+                    currentAlbumContext = albumContext;
+                    renderAlbumContext(albumContext);
+
+                    // Sync main artwork with album context artwork (higher quality)
+                    if (albumContext.artworkUrl && albumContext.artworkUrl !== artworkManager.currentUrl) {
+                      console.log("🖼️ Syncing main artwork with album context (higher quality)");
+                      artworkManager.update(albumContext.artworkUrl, () => {
+                        applyAlbumGradient(albumContext.artworkUrl);
+                      });
+                    }
+                  } else {
+                    // No album context found - hide skeleton
+                    renderAlbumContext(null);
+                  }
+                })
+                .catch((err) => {
+                  console.log("Album context fetch failed:", err);
+                  // Hide skeleton on error
+                  renderAlbumContext(null);
+                });
+            } else {
+              currentAlbumContext = null;
+              renderAlbumContext(null);
+            }
+
+            // Fetch artist context in background (non-blocking)
+            if (data.currentArtist) {
+              console.log("🎤 Fetching artist context in background...");
+              // Show loading skeleton immediately while fetching
+              showArtistContextLoader();
+              fetchArtistContext(data.currentArtist, { artistBio: data.artistBio })
+                .then((artistContext) => {
+                  if (artistContext) {
+                    currentArtistContext = artistContext;
+                    renderArtistContext(artistContext);
+                  } else {
+                    // No artist context found - hide skeleton
+                    renderArtistContext(null);
+                  }
+                })
+                .catch((err) => {
+                  console.log("Artist context fetch failed:", err);
+                  // Hide skeleton on error
+                  renderArtistContext(null);
+                });
+            } else {
+              currentArtistContext = null;
+              renderArtistContext(null);
+            }
+          }
+        } else {
+          document.getElementById("songTitle").textContent =
+            "Waiting for music...";
+          document.getElementById("artistName").textContent = "";
+        }
+
+        document.getElementById("appName").textContent =
+          data.status === "playing"
+            ? `Listening on ${data.app}`
+            : data.status === "paused"
+              ? `Paused on ${data.app}`
+              : `Last used ${data.app}`;
+
+        // Update artwork with smooth crossfade (preloads in background)
+        if (data.albumArt && data.albumArt !== artworkManager.currentUrl) {
+          artworkManager.update(data.albumArt, () => {
+            // Callback when image is loaded and visible
+            applyAlbumGradient(data.albumArt);
+
+            // If this is initial load and we have song data, transition now
+            if (isInitialLoad && data.currentSong) {
+              isInitialLoad = false;
+              transitionToContent();
+            }
+          });
+        } else if (isInitialLoad && data.currentSong && artworkManager.currentUrl) {
+          // Artwork already loaded (e.g., on subsequent polls)
+          isInitialLoad = false;
+          transitionToContent();
+        }
+
+        updateSessionStatus(data);
+
+        if (!isPlaying) {
+          document.getElementById("currentTime").textContent =
+            formatTime(localPlaybackTime);
+          if (songDuration && songDuration > 0) {
+            const percent = Math.min(
+              (localPlaybackTime / songDuration) * 100,
+              100
+            );
+            document.getElementById("progressFill").style.width =
+              percent + "%";
+
+            const remaining = songDuration - localPlaybackTime;
+            document.getElementById("remainingTime").textContent =
+              "-" + formatTime(Math.max(0, remaining));
+          }
+        }
+      } catch (err) {
+        console.error("❌ Error polling session:", err);
+        if (err.message === "Session not found") {
+          document.body.innerHTML =
+            "<div class='loading'>Session expired or not found</div>";
+          // FIX: Clear both intervals
+          if (updateInterval) clearInterval(updateInterval);
+          if (pollInterval) clearInterval(pollInterval);
+        }
+      }
+    }
+
+    // ========== Initial load ==========
+    loadRecentlyPlayed()
+      .catch((err) =>
+        console.log("Recently played load failed, continuing:", err)
+      )
+      .finally(() => {
+        pollSession().then(() => {
+          updateInterval = setInterval(updateProgress, 100);
+          // FIX: Store poll interval reference
+          pollInterval = setInterval(pollSession, 2000);
+        });
+      });
+  </script>
+</body>
+
+</html>
