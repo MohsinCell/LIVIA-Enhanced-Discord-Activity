@@ -20,9 +20,14 @@ class AlbumArtFetcher {
 
   /**
    * Get album info including artwork
+   * @param {string} song - Song title
+   * @param {string} artist - Artist name
+   * @param {string} album - Album name (optional)
+   * @param {string} thumbnailBase64 - Base64 thumbnail from SMTC (optional)
    */
   async getAlbumInfo(song, artist, album = null, thumbnailBase64 = null) {
-    // Pre-process: Some apps combine artist and album in the artist field
+    // Pre-process: Some apps (like Apple Music) combine artist and album in the artist field
+    // e.g., "Travis Scott - JACKBOYS 2" should be split into artist="Travis Scott" album="JACKBOYS 2"
     if (artist && !album) {
       const separators = [' - ', ' — ', ' – '];
       for (const sep of separators) {
@@ -31,18 +36,18 @@ class AlbumArtFetcher {
           if (parts.length >= 2) {
             artist = parts[0].trim();
             album = parts.slice(1).join(sep).trim();
-            console.log(`Split artist/album: "${artist}" / "${album}"`);
+            console.log(`🔧 Split artist/album: "${artist}" / "${album}"`);
             break;
           }
         }
       }
     }
     
-    console.log(`Input: song="${song}" artist="${artist}" album="${album}"`);
+    console.log(`🎵 Input: song="${song}" artist="${artist}" album="${album}" thumbnail=${thumbnailBase64 ? `${Math.round(thumbnailBase64.length/1024)}KB` : 'no'}`);
 
     const cacheKey = `${song?.toLowerCase()}-${artist?.toLowerCase()}`;
     if (this.cache.has(cacheKey)) {
-      console.log('Using cached album info');
+      console.log('📦 Using cached album info');
       return this.cache.get(cacheKey);
     }
 
@@ -55,16 +60,15 @@ class AlbumArtFetcher {
       label: null,
       albumDescription: null,
       artistBio: null,
-      artistImage: null,
       cleanedSong: song,
       cleanedArtist: artist,
       cleanedAlbum: album
     };
 
-    // Get ALL metadata from Gemini AI
+    // STEP 1: Get ALL metadata from Gemini AI
     if (this.geminiApiKey) {
       try {
-        console.log('Fetching metadata from Gemini...');
+        console.log('🤖 Fetching metadata from Gemini...');
         const aiMetadata = await this.fetchMetadataFromAI(song, artist, album);
         if (aiMetadata) {
           result = { ...result, ...aiMetadata };
@@ -72,10 +76,12 @@ class AlbumArtFetcher {
             result.albumName = album;
             result.cleanedAlbum = album;
           }
-          console.log(`Gemini: "${result.cleanedSong}" by ${result.cleanedArtist}`);
+          console.log(`🤖 Gemini: "${result.cleanedSong}" by ${result.cleanedArtist}`);
+          console.log(`   Album: "${result.albumName}" (${result.year || '?'})`);
+          console.log(`   Genre: ${result.genre || '?'}, Label: ${result.label || '?'}`);
         }
       } catch (error) {
-        console.log('Gemini failed:', error.message);
+        console.log('🤖 Gemini failed:', error.message);
         const parsed = this.simpleParse(song, artist, album);
         result.cleanedSong = parsed.song;
         result.cleanedArtist = parsed.artist;
@@ -84,19 +90,21 @@ class AlbumArtFetcher {
       }
     }
 
-    // Get album artwork
+    // STEP 2: Get album artwork - try online sources first (better quality)
     result.artUrl = await this.fetchAlbumArt(
       result.cleanedSong,
       result.cleanedArtist,
       result.albumName
     );
 
-    // Use SMTC thumbnail if no online artwork
+    // STEP 3: If no online artwork found, use SMTC thumbnail as fallback
     if (!result.artUrl && thumbnailBase64 && thumbnailBase64.length > 100) {
-      console.log('Using SMTC thumbnail as fallback');
+      console.log('🖼️ Using SMTC thumbnail as fallback (no online source found)');
+      // Convert to data URL for web compatibility
       result.artUrl = `data:image/png;base64,${thumbnailBase64}`;
     }
 
+    // Cache result
     this.cache.set(cacheKey, result);
     if (this.cache.size > this.maxCacheSize) {
       const firstKey = this.cache.keys().next().value;
@@ -107,7 +115,7 @@ class AlbumArtFetcher {
   }
 
   /**
-   * Fetch ALL metadata from Gemini
+   * Fetch ALL metadata from Gemini - this is our primary source for everything
    */
   async fetchMetadataFromAI(song, artist, album) {
     const cacheKey = `ai:${song}|${artist}|${album}`;
@@ -115,7 +123,7 @@ class AlbumArtFetcher {
       return this.metadataCache.get(cacheKey);
     }
 
-    const prompt = `You are a music encyclopedia. Provide metadata for this song.
+    const prompt = `You are a music encyclopedia. Provide metadata for this song:
 
 Song: "${song}"
 Artist: "${artist}"
@@ -124,7 +132,7 @@ ${album ? `Album: "${album}"` : ''}
 Return ONLY valid JSON (no markdown):
 {"song":"exact title","artist":"exact artist","album":"${album || 'album name'}","year":2024,"genre":"genre","label":"label","trackCount":12,"albumDescription":"A detailed paragraph about the album...","artistBio":"A detailed paragraph about the artist...","artistImage":"https://example.com/artist.jpg"}
 
-IMPORTANT: albumDescription should be 5-6 sentences about the album. artistBio should be 5-6 sentences about the artist. artistImage should be a direct URL to a photo of the artist, or null if not found.`;
+IMPORTANT: albumDescription should be a rich, detailed paragraph (5-6 sentences) covering the album's themes, sound, critical reception, and significance. artistBio should be a rich, detailed paragraph (5-6 sentences) covering the artist's background, career highlights, musical style, and influence. Do NOT write short one-liners. artistImage should be a direct URL to a photo of the artist (from Wikipedia, official site, or a reliable source). If you cannot find a reliable image URL, use null.
 
     try {
       const response = await fetch(`${GEMINI_API_URL}?key=${this.geminiApiKey}`, {
@@ -141,9 +149,11 @@ IMPORTANT: albumDescription should be 5-6 sentences about the album. artistBio s
       }
 
       const data = await response.json();
+      
+      // Check if response was truncated
       const finishReason = data.candidates?.[0]?.finishReason;
       if (finishReason && finishReason !== 'STOP') {
-        console.log('Warning: Response truncated:', finishReason);
+        console.log('🤖 Warning: Response truncated, reason:', finishReason);
       }
       
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -173,7 +183,7 @@ IMPORTANT: albumDescription should be 5-6 sentences about the album. artistBio s
       this.metadataCache.set(cacheKey, result);
       return result;
     } catch (error) {
-      console.log('Parse error:', error.message);
+      console.log('🤖 Parse error:', error.message);
       return null;
     }
   }
@@ -184,33 +194,33 @@ IMPORTANT: albumDescription should be 5-6 sentences about the album. artistBio s
   async fetchAlbumArt(song, artist, album) {
     let artUrl = null;
 
-    // 1. Try Cover Art Archive first
+    // 1. Try Cover Art Archive first (best for compilations, free, high quality)
     if (album) {
-      console.log('Trying Cover Art Archive...');
+      console.log('🎼 Trying Cover Art Archive...');
       artUrl = await this.fetchFromCoverArtArchive(album, artist);
       if (artUrl) {
-        console.log('Cover Art Archive artwork found');
+        console.log('🎼 Cover Art Archive artwork found');
         return artUrl;
       }
     }
 
-    // 2. Try iTunes
-    console.log('Trying iTunes...');
+    // 2. Try iTunes (best quality for mainstream)
+    console.log('🍎 Trying iTunes...');
     artUrl = await this.fetchFromItunes(song, artist, album);
     if (artUrl) {
-      console.log('iTunes artwork found');
+      console.log('🍎 iTunes artwork found');
       return artUrl;
     }
 
-    // 3. Try Apple Music direct
-    console.log('Trying Apple Music direct...');
+    // 3. Try direct Apple Music lookup (for newer releases)
+    console.log('🍏 Trying Apple Music direct...');
     artUrl = await this.fetchFromAppleMusicDirect(artist, album);
     if (artUrl) {
-      console.log('Apple Music direct artwork found');
+      console.log('🍏 Apple Music direct artwork found');
       return artUrl;
     }
 
-    console.log('No artwork found from any source');
+    console.log('❌ No artwork found from any source');
     return null;
   }
 
@@ -219,8 +229,9 @@ IMPORTANT: albumDescription should be 5-6 sentences about the album. artistBio s
    */
   async fetchFromItunes(song, artist, album) {
     try {
+      // Strategy 1: Search by album
       if (album) {
-        const url = `https://itunes.apple.com/search?term=${encodeURIComponent(artist + ' ' + album)}&entity=album&limit=10`;
+        const url = `https://itunes.apple.com/search?term=${encodeURIComponent(`${artist} ${album}`)}&entity=album&limit=10`;
         const response = await fetch(url, { timeout: 5000 });
         const data = await response.json();
 
@@ -232,7 +243,8 @@ IMPORTANT: albumDescription should be 5-6 sentences about the album. artistBio s
         }
       }
 
-      const songUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(artist + ' ' + song)}&entity=song&limit=10`;
+      // Strategy 2: Search by song
+      const songUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(`${artist} ${song}`)}&entity=song&limit=10`;
       const songResponse = await fetch(songUrl, { timeout: 5000 });
       const songData = await songResponse.json();
 
@@ -249,22 +261,26 @@ IMPORTANT: albumDescription should be 5-6 sentences about the album. artistBio s
   }
 
   /**
-   * Cover Art Archive
+   * Cover Art Archive - Primary artwork source
+   * Searches by artist + album first to avoid wrong albums with same name
+   * Falls back to album-only search for compilations
+   * Uses MusicBrainz to find release IDs, then fetches from Cover Art Archive
    */
   async fetchFromCoverArtArchive(album, artist) {
     const userAgent = 'Livia/1.0.0 (https://livia.mom)';
     
     try {
-      // Search by album + artist first
-      console.log(`Searching for album + artist: "${album}" by "${artist}"`);
+      // Strategy 1: Search by album + artist combined (most accurate)
+      console.log(`   Searching for album + artist: "${album}" by "${artist}"`);
       let releaseIds = await this.searchMusicBrainzByAlbumAndArtist(album, artist, userAgent);
       if (releaseIds?.length) {
         const artUrl = await this.getCoverArtArchiveImage(releaseIds, userAgent);
         if (artUrl) return artUrl;
       }
       
-      // Fallback: album only
-      console.log(`Fallback: Searching for album only: "${album}"`);
+      // Strategy 2: Search by ALBUM NAME ONLY (fallback for compilations)
+      // This handles cases where track artist differs from album artist
+      console.log(`   Fallback: Searching for album only: "${album}"`);
       releaseIds = await this.searchMusicBrainzByAlbum(album, userAgent);
       if (releaseIds?.length) {
         const artUrl = await this.getCoverArtArchiveImage(releaseIds, userAgent);
@@ -277,8 +293,12 @@ IMPORTANT: albumDescription should be 5-6 sentences about the album. artistBio s
     return null;
   }
 
+  /**
+   * Search MusicBrainz by album name only - best for compilations
+   */
   async searchMusicBrainzByAlbum(album, userAgent) {
     try {
+      // Search for releases with exact album title match
       const query = `release:"${album}"`;
       const searchUrl = `https://musicbrainz.org/ws/2/release?query=${encodeURIComponent(query)}&limit=10&fmt=json`;
       
@@ -292,9 +312,11 @@ IMPORTANT: albumDescription should be 5-6 sentences about the album. artistBio s
 
       if (!data.releases?.length) return null;
       
+      // Filter and score releases
       const albumLower = album.toLowerCase();
       const scoredReleases = data.releases
         .filter(release => {
+          // Only consider releases where title matches well
           const releaseTitle = release.title?.toLowerCase() || '';
           return releaseTitle === albumLower || 
                  releaseTitle.includes(albumLower) || 
@@ -304,19 +326,26 @@ IMPORTANT: albumDescription should be 5-6 sentences about the album. artistBio s
           let score = 0;
           const releaseTitle = release.title?.toLowerCase() || '';
           
+          // Exact title match gets highest score
           if (releaseTitle === albumLower) score += 100;
           else if (releaseTitle.includes(albumLower)) score += 70;
           else if (albumLower.includes(releaseTitle)) score += 50;
           
+          // Prefer official releases
           if (release.status === 'Official') score += 30;
+          
+          // Prefer releases with more complete data
           if (release.date) score += 10;
           if (release.country) score += 5;
-          if (release['track-count'] > 5) score += 10;
+          if (release['track-count'] > 5) score += 10; // Prefer albums over singles
           
           return { release, score };
         });
       
+      // Sort by score descending
       scoredReleases.sort((a, b) => b.score - a.score);
+      
+      // Return top release IDs
       return scoredReleases.slice(0, 5).map(sr => sr.release.id);
       
     } catch (e) {
@@ -324,6 +353,9 @@ IMPORTANT: albumDescription should be 5-6 sentences about the album. artistBio s
     }
   }
 
+  /**
+   * Search MusicBrainz by album + artist
+   */
   async searchMusicBrainzByAlbumAndArtist(album, artist, userAgent) {
     try {
       const query = `release:"${album}" AND artist:"${artist}"`;
@@ -347,12 +379,15 @@ IMPORTANT: albumDescription should be 5-6 sentences about the album. artistBio s
         const releaseTitle = release.title?.toLowerCase() || '';
         const releaseArtist = release['artist-credit']?.[0]?.name?.toLowerCase() || '';
         
+        // Title match
         if (releaseTitle === albumLower) score += 100;
         else if (releaseTitle.includes(albumLower) || albumLower.includes(releaseTitle)) score += 50;
         
+        // Artist match
         if (releaseArtist === artistLower) score += 100;
         else if (releaseArtist.includes(artistLower) || artistLower.includes(releaseArtist)) score += 50;
         
+        // Prefer official releases
         if (release.status === 'Official') score += 20;
         
         return { release, score };
@@ -366,6 +401,9 @@ IMPORTANT: albumDescription should be 5-6 sentences about the album. artistBio s
     }
   }
 
+  /**
+   * Get cover art from Cover Art Archive using the JSON API
+   */
   async getCoverArtArchiveImage(releaseIds, userAgent) {
     if (!Array.isArray(releaseIds)) {
       releaseIds = [releaseIds];
@@ -388,6 +426,7 @@ IMPORTANT: albumDescription should be 5-6 sentences about the album. artistBio s
         
         if (!data.images?.length) continue;
         
+        // Find the front cover image
         let frontImage = data.images.find(img => img.front === true);
         if (!frontImage) {
           frontImage = data.images.find(img => img.approved === true);
@@ -398,6 +437,7 @@ IMPORTANT: albumDescription should be 5-6 sentences about the album. artistBio s
         
         if (!frontImage) continue;
         
+        // Get best quality: 500px is good balance of quality and size
         const thumbnails = frontImage.thumbnails || {};
         const imageUrl = 
           thumbnails['500'] ||
@@ -418,10 +458,42 @@ IMPORTANT: albumDescription should be 5-6 sentences about the album. artistBio s
     return null;
   }
 
+  /**
+   * iTunes Search API
+   */
+  async fetchFromLastFm(song, artist, album) {
+    try {
+      // Try album lookup
+      if (album) {
+        const url = `https://ws.audioscrobbler.com/2.0/?method=album.getinfo&artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}&api_key=${this.lastFmApiKey}&format=json`;
+        const response = await fetch(url, { timeout: 5000 });
+        const data = await response.json();
+
+        const artUrl = this.extractLastFmImage(data.album?.image);
+        if (artUrl) return artUrl;
+      }
+
+      // Try track lookup
+      const trackUrl = `https://ws.audioscrobbler.com/2.0/?method=track.getinfo&artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(song)}&api_key=${this.lastFmApiKey}&format=json`;
+      const trackResponse = await fetch(trackUrl, { timeout: 5000 });
+      const trackData = await trackResponse.json();
+
+      const trackArt = this.extractLastFmImage(trackData.track?.album?.image);
+      if (trackArt) return trackArt;
+    } catch (e) {
+      console.log('Last.fm error:', e.message);
+    }
+    return null;
+  }
+
+  /**
+   * Direct Apple Music catalog search (different endpoint, may have newer releases)
+   */
   async fetchFromAppleMusicDirect(artist, album) {
     if (!album) return null;
     
     try {
+      // Apple's storefront search (no auth needed)
       const searchTerm = `${artist} ${album}`.replace(/[^\w\s]/g, ' ');
       const url = `https://itunes.apple.com/search?term=${encodeURIComponent(searchTerm)}&media=music&entity=album&limit=25`;
       
@@ -429,6 +501,7 @@ IMPORTANT: albumDescription should be 5-6 sentences about the album. artistBio s
       const data = await response.json();
 
       if (data.results?.length > 0) {
+        // Look for exact or close match
         const albumLower = album.toLowerCase();
         const artistLower = artist.toLowerCase();
 
@@ -436,6 +509,7 @@ IMPORTANT: albumDescription should be 5-6 sentences about the album. artistBio s
           const resultAlbum = (result.collectionName || '').toLowerCase();
           const resultArtist = (result.artistName || '').toLowerCase();
 
+          // Check for match
           if (resultArtist.includes(artistLower) || artistLower.includes(resultArtist)) {
             if (resultAlbum.includes(albumLower) || albumLower.includes(resultAlbum) ||
                 this.similarStrings(resultAlbum, albumLower)) {
@@ -452,6 +526,9 @@ IMPORTANT: albumDescription should be 5-6 sentences about the album. artistBio s
     return null;
   }
 
+  /**
+   * Helper: Find best matching result
+   */
   findBestMatch(results, artist, searchTerm, termField, artistField) {
     const searchLower = searchTerm?.toLowerCase() || '';
     const artistLower = artist?.toLowerCase() || '';
@@ -464,9 +541,11 @@ IMPORTANT: albumDescription should be 5-6 sentences about the album. artistBio s
       const resultTerm = (result[termField] || '').toLowerCase();
       const resultArtist = (result[artistField] || '').toLowerCase();
 
+      // Artist match
       if (resultArtist === artistLower) score += 100;
       else if (resultArtist.includes(artistLower) || artistLower.includes(resultArtist)) score += 50;
 
+      // Term match
       if (resultTerm === searchLower) score += 100;
       else if (resultTerm.includes(searchLower) || searchLower.includes(resultTerm)) score += 50;
 
@@ -479,6 +558,9 @@ IMPORTANT: albumDescription should be 5-6 sentences about the album. artistBio s
     return bestScore >= 50 ? bestMatch : results[0];
   }
 
+  /**
+   * Helper: Check string similarity
+   */
   similarStrings(a, b) {
     if (!a || !b) return false;
     const cleanA = a.replace(/[^\w]/g, '').toLowerCase();
@@ -486,6 +568,9 @@ IMPORTANT: albumDescription should be 5-6 sentences about the album. artistBio s
     return cleanA === cleanB || cleanA.includes(cleanB) || cleanB.includes(cleanA);
   }
 
+  /**
+   * Fallback parser
+   */
   simpleParse(song, artist, album) {
     let parsedSong = song || '';
     let parsedArtist = artist || '';
