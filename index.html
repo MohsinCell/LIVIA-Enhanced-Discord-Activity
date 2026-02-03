@@ -2207,6 +2207,9 @@
       .album-description {
         text-align: center;
         font-size: 13px;
+        max-height: 120px;
+        overflow-y: auto;
+        padding-right: 6px;
       }
 
       .album-genres {
@@ -3760,8 +3763,16 @@
 
       const genresContainer = document.getElementById("albumGenres");
       if (albumData.genre) {
-        genresContainer.innerHTML = `<div class="genre-tag">${escapeHtml(capitalizeGenre(albumData.genre))}</div>`;
-        console.log("   Genre:", albumData.genre);
+        // Split by comma and create individual tags like artist tags
+        const genres = albumData.genre.split(',').map(g => g.trim()).filter(g => g.length > 0);
+        if (genres.length > 0) {
+          genresContainer.innerHTML = genres
+            .map(tag => `<span class="genre-tag">${escapeHtml(capitalizeGenre(tag))}</span>`)
+            .join('');
+          console.log("   Genres:", genres.join(', '));
+        } else {
+          genresContainer.innerHTML = "";
+        }
       } else {
         genresContainer.innerHTML = "";
       }
