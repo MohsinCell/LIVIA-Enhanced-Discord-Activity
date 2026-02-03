@@ -1,12 +1,119 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" prefix="og: https://ogp.me/ns#">
 
 <head>
+  <!-- Primary Meta Tags -->
   <meta charset="UTF-8" />
-  <title>Livia</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="description" content="Display your music activity on Discord with beautiful lyrics and album art." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  
+  <title>Livia - Share Your Music on Discord with Live Lyrics & Album Art</title>
+  <meta name="title" content="Livia - Share Your Music on Discord with Live Lyrics & Album Art" />
+  <meta name="description" content="Display your music activity on Discord with real-time synced lyrics, high-resolution album art, and shareable live session pages. Free, open-source, and works with Spotify, Apple Music, YouTube Music, and more." />
+  <meta name="keywords" content="Discord Rich Presence, Discord music status, Discord activity, music sharing, live lyrics, album art, Spotify Discord, Apple Music Discord, YouTube Music Discord, music presence, Discord bot, music tracker" />
+  <meta name="author" content="Mohsin" />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+  <meta name="googlebot" content="index, follow" />
+  <meta name="language" content="English" />
+  <meta name="revisit-after" content="7 days" />
+  <meta name="rating" content="general" />
+  
+  <!-- Canonical URL -->
+  <link rel="canonical" href="https://livia.mom/" />
+  
+  <!-- Favicon & Icons -->
   <link rel="icon" type="image/svg+xml" href="/livia-logo.svg" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/site.webmanifest" />
+  <meta name="theme-color" content="#0a0908" />
+  <meta name="msapplication-TileColor" content="#0a0908" />
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://livia.mom/" />
+  <meta property="og:title" content="Livia - Share Your Music on Discord with Live Lyrics & Album Art" />
+  <meta property="og:description" content="Display your music activity on Discord with real-time synced lyrics, high-resolution album art, and shareable live session pages. Free and open-source." />
+  <meta property="og:image" content="https://livia.mom/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Livia - Discord Music Presence with Live Lyrics" />
+  <meta property="og:site_name" content="Livia" />
+  <meta property="og:locale" content="en_US" />
+  
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:url" content="https://livia.mom/" />
+  <meta name="twitter:title" content="Livia - Share Your Music on Discord with Live Lyrics & Album Art" />
+  <meta name="twitter:description" content="Display your music activity on Discord with real-time synced lyrics, high-resolution album art, and shareable live session pages. Free and open-source." />
+  <meta name="twitter:image" content="https://livia.mom/og-image.png" />
+  <meta name="twitter:image:alt" content="Livia - Discord Music Presence with Live Lyrics" />
+  <meta name="twitter:creator" content="@MohsinCell" />
+  
+  <!-- Discord Embed (for when shared on Discord) -->
+  <meta name="discord:site" content="Livia" />
+  
+  <!-- Structured Data / JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Livia",
+    "description": "Display your music activity on Discord with real-time synced lyrics, high-resolution album art, and shareable live session pages.",
+    "url": "https://livia.mom",
+    "applicationCategory": "MultimediaApplication",
+    "operatingSystem": "Windows 10+, macOS",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "5",
+      "ratingCount": "100"
+    },
+    "author": {
+      "@type": "Person",
+      "name": "Mohsin",
+      "url": "https://github.com/MohsinCell"
+    },
+    "downloadUrl": "https://livia.mom/Livia-1.0.0-win-x64.exe",
+    "softwareVersion": "1.0.0",
+    "fileSize": "74MB",
+    "screenshot": "https://livia.mom/og-image.png",
+    "featureList": [
+      "Real-time synced lyrics",
+      "High-resolution album art",
+      "Discord Rich Presence integration",
+      "Shareable live session pages",
+      "Support for Spotify, Apple Music, YouTube Music, TIDAL",
+      "Privacy-focused - no tracking",
+      "Auto-start on Windows startup",
+      "System tray integration"
+    ]
+  }
+  </script>
+  
+  <!-- Organization Schema -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Livia",
+    "url": "https://livia.mom",
+    "logo": "https://livia.mom/livia-logo.svg",
+    "sameAs": [
+      "https://github.com/MohsinCell/LIVIA-Enhanced-Discord-Activity"
+    ]
+  }
+  </script>
+  
+  <!-- Preconnect for Performance -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="dns-prefetch" href="https://api.livia.mom" />
 
   <style>
     :root {
