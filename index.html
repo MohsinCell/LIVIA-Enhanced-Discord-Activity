@@ -4201,11 +4201,11 @@
 
         // Build the result object
         // Bio priority: Gemini > Last.fm summary
-        // Image priority: Deezer > TheAudioDB > MusicBrainz/Wikimedia > Last.fm
+        // Image priority: Last.fm > Deezer > TheAudioDB > MusicBrainz/Wikimedia
         const result = {
           name: cleanedArtist,
           type: mbArtistType || 'Artist',
-          imageUrl: deezerImage || audiodb_image || mbImage || lastfmImage,
+          imageUrl: lastfmImage || deezerImage || audiodb_image || mbImage,
           country: mbCountry,
           beginArea: mbBeginArea,
           lifeSpan: mbLifeSpan,
