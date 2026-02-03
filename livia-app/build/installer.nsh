@@ -6,7 +6,8 @@
 !macroend
 
 !macro preInit
-  ; Pre-initialization
+  ; Try to kill Livia process before installing (to avoid file lock errors)
+  nsExec::ExecToLog 'taskkill /f /im Livia.exe'
 !macroend
 
 !macro customInit
@@ -20,5 +21,6 @@
 !macroend
 
 !macro customUnInstall
-  ; Custom uninstall actions
+  ; Kill Livia before uninstalling
+  nsExec::ExecToLog 'taskkill /f /im Livia.exe'
 !macroend
