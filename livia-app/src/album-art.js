@@ -261,25 +261,26 @@ IMPORTANT: albumDescription should be a rich, detailed paragraph (5-6 sentences)
 
   /**
    * Cover Art Archive - Primary artwork source
-   * Searches by album name first (ignoring track artist for compilations)
+   * Searches by artist + album first to avoid wrong albums with same name
+   * Falls back to album-only search for compilations
    * Uses MusicBrainz to find release IDs, then fetches from Cover Art Archive
    */
   async fetchFromCoverArtArchive(album, artist) {
     const userAgent = 'Livia/1.0.0 (https://livia.mom)';
     
     try {
-      // Strategy 1: Search by ALBUM NAME ONLY first (best for compilations like JACKBOYS 2)
-      // This handles cases where track artist differs from album artist
-      console.log(`   Searching for album: "${album}"`);
-      let releaseIds = await this.searchMusicBrainzByAlbum(album, userAgent);
+      // Strategy 1: Search by album + artist combined (most accurate)
+      console.log(`   Searching for album + artist: "${album}" by "${artist}"`);
+      let releaseIds = await this.searchMusicBrainzByAlbumAndArtist(album, artist, userAgent);
       if (releaseIds?.length) {
         const artUrl = await this.getCoverArtArchiveImage(releaseIds, userAgent);
         if (artUrl) return artUrl;
       }
       
-      // Strategy 2: Search by album + artist combined
-      console.log(`   Searching for album + artist: "${album}" by "${artist}"`);
-      releaseIds = await this.searchMusicBrainzByAlbumAndArtist(album, artist, userAgent);
+      // Strategy 2: Search by ALBUM NAME ONLY (fallback for compilations)
+      // This handles cases where track artist differs from album artist
+      console.log(`   Fallback: Searching for album only: "${album}"`);
+      releaseIds = await this.searchMusicBrainzByAlbum(album, userAgent);
       if (releaseIds?.length) {
         const artUrl = await this.getCoverArtArchiveImage(releaseIds, userAgent);
         if (artUrl) return artUrl;
