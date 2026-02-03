@@ -3264,7 +3264,7 @@
             song: track.song,
             artist: track.artist,
             album: track.album || "",
-            artworkUrl: track.albumArt || "",
+            artworkUrl: ensureHttps(track.albumArt) || "",
             timestamp: track.playedAt
           }));
 
@@ -3328,7 +3328,7 @@
                 song: track.song,
                 artist: track.artist,
                 album: track.album || "",
-                artworkUrl: track.albumArt || "",
+                artworkUrl: ensureHttps(track.albumArt) || "",
                 timestamp: track.playedAt
               }));
               renderRecentlyPlayed();
