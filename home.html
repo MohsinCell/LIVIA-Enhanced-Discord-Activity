@@ -195,10 +195,15 @@
       text-decoration: none;
     }
 
-    .nav-logo img {
-      height: 36px;
+    .nav-logo .logo-desktop {
+      height: 32px;
       width: auto;
-      border-radius: 6px;
+    }
+
+    .nav-logo .logo-mobile {
+      display: none;
+      height: 32px;
+      width: auto;
     }
 
     .nav-links {
@@ -910,6 +915,14 @@
         padding: 14px 20px;
       }
 
+      .nav-logo .logo-desktop {
+        display: none;
+      }
+
+      .nav-logo .logo-mobile {
+        display: block;
+      }
+
       .nav-links {
         display: none;
       }
@@ -1174,7 +1187,8 @@
 
   <nav>
     <a href="/" class="nav-logo">
-      <img src="/og-image.png" alt="Livia">
+      <img src="/livia-long.png" alt="Livia" class="logo-desktop">
+      <img src="/livia-logo.svg" alt="Livia" class="logo-mobile">
     </a>
     <div class="nav-links">
       <a href="#features">Features</a>
