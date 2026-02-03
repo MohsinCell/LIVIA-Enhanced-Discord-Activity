@@ -509,7 +509,7 @@ async function setupAutoLaunch() {
 
 // ============ Main Loop ============
 async function startMainLoop() {
-  console.log('🔄 Starting main loop...');
+  console.log('Starting main loop...');
   
   while (isRunning) {
     try {
@@ -517,7 +517,7 @@ async function startMainLoop() {
       
       // Debug logging
       if (media) {
-        console.log(`📡 Detected: ${media.title} - ${media.artist} [${media.state}] from ${media.app}`);
+        console.log(`Detected: ${media.title} - ${media.artist} [${media.state}] from ${media.app}`);
       }
       
       if (media && media.title && !isPlaceholder(media.title)) {
@@ -526,7 +526,7 @@ async function startMainLoop() {
         
         // Song changed
         if (songId !== lastSongId) {
-          console.log(`🎵 Now Playing: ${media.title} - ${media.artist}`);
+          console.log(`Now Playing: ${media.title} - ${media.artist}`);
           lastSongId = songId;
           
           // Fetch album art (also cleans metadata via Gemini AI)
@@ -553,9 +553,9 @@ async function startMainLoop() {
           lastArtistBio = albumInfo.artistBio || null;
           lastArtistImage = albumInfo.artistImage || null;
           
-          console.log(`✨ Cleaned metadata: "${lastCleanedSong}" by "${lastCleanedArtist}"`);
+          console.log(`Cleaned metadata: "${lastCleanedSong}" by "${lastCleanedArtist}"`);
           if (lastGenre || lastYear) {
-            console.log(`📀 Album: "${lastAlbumName}" (${lastYear || 'Unknown year'}) - ${lastGenre || 'Unknown genre'}`);
+            console.log(`Album: "${lastAlbumName}" (${lastYear || 'Unknown year'}) - ${lastGenre || 'Unknown genre'}`);
           }
           
           // Create or update session with CLEANED data
@@ -563,7 +563,7 @@ async function startMainLoop() {
             currentSessionId = await createSession(media, isPlaying);
             if (currentSessionId) {
               currentSessionUrl = `https://livia.mom/s/${currentSessionId}`;
-              console.log(`✅ Session: ${currentSessionUrl}`);
+              console.log(`Session: ${currentSessionUrl}`);
             }
           } else {
             await updateSession(media, isPlaying);
@@ -582,7 +582,7 @@ async function startMainLoop() {
         
         // Play/pause state changed
         if (isPlaying !== lastPlayingState) {
-          console.log(isPlaying ? '▶️ Playing' : '⏸️ Paused');
+          console.log(isPlaying ? 'Playing' : 'Paused');
           lastPlayingState = isPlaying;
           
           if (currentSessionId) {
@@ -607,7 +607,7 @@ async function startMainLoop() {
       } else {
         // No media playing
         if (currentSessionId || lastSongId) {
-          console.log('⏹️ Stopped');
+          console.log('Stopped');
           if (currentSessionId) {
             await endSession();
             currentSessionId = null;
