@@ -910,6 +910,9 @@
       font-size: 14px;
       line-height: 1.6;
       opacity: 0.7;
+      max-height: 140px;
+      overflow-y: auto;
+      padding-right: 8px;
     }
 
     .album-description p {
@@ -918,6 +921,24 @@
 
     .album-description p:last-child {
       margin-bottom: 0;
+    }
+
+    .album-description::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .album-description::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 2px;
+    }
+
+    .album-description::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 2px;
+    }
+
+    .album-description::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.3);
     }
 
     .album-genres {
