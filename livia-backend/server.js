@@ -7,7 +7,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const sessions = {}; // in-memory (v1)
+const sessions = {};
+
+// Helper to ensure HTTPS for external image URLs
+function ensureHttps(url) {
+  if (!url) return url;
+  return url.replace(/^http:\/\//, 'https://');
+}
 
 // ========== HISTORY SYSTEM ==========
 // Use data directory if it exists (for Docker), otherwise use current directory
@@ -56,7 +62,7 @@ function addToHistory(trackData) {
     song,
     artist,
     album: album || "",
-    albumArt: albumArt || "",
+    albumArt: ensureHttps(albumArt) || "",
     app: app || "Unknown",
     duration: duration || 0,
     playedAt: Date.now(),
@@ -228,7 +234,7 @@ app.post("/session", (req, res) => {
   // Create session with complete initial data including user info and extended metadata
   sessions[id] = {
     app: app,
-    albumArt: albumArt || "",
+    albumArt: ensureHttps(albumArt) || "",
     currentSong: song || null,
     currentArtist: artist || null,
     album: album || null,
