@@ -3865,10 +3865,14 @@
         return null;
       }
 
-      // Extract Gemini artistBio if provided
+      // Extract Gemini artist data if provided
       const geminiArtistBio = geminiData.artistBio || null;
+      const geminiArtistImage = geminiData.artistImage || null;
       if (geminiArtistBio) {
         console.log("✅ Using Gemini artistBio as primary source");
+      }
+      if (geminiArtistImage) {
+        console.log("✅ Using Gemini artistImage as primary source");
       }
 
       // Clean artist name (remove features, etc.)
@@ -4209,11 +4213,11 @@
 
         // Build the result object
         // Bio priority: Gemini > Last.fm summary
-        // Image priority: Last.fm > Deezer > TheAudioDB > MusicBrainz/Wikimedia
+        // Image priority: Gemini > Last.fm > Deezer > TheAudioDB > MusicBrainz/Wikimedia
         const result = {
           name: cleanedArtist,
           type: mbArtistType || 'Artist',
-          imageUrl: lastfmImage || deezerImage || audiodb_image || mbImage,
+          imageUrl: geminiArtistImage || lastfmImage || deezerImage || audiodb_image || mbImage,
           country: mbCountry,
           beginArea: mbBeginArea,
           lifeSpan: mbLifeSpan,
@@ -5322,7 +5326,7 @@
               console.log("🎤 Fetching artist context in background...");
               // Show loading skeleton immediately while fetching
               showArtistContextLoader();
-              fetchArtistContext(data.currentArtist, { artistBio: data.artistBio })
+              fetchArtistContext(data.currentArtist, { artistBio: data.artistBio, artistImage: data.artistImage })
                 .then((artistContext) => {
                   if (artistContext) {
                     currentArtistContext = artistContext;

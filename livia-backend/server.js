@@ -47,7 +47,7 @@ function saveHistory() {
 
 // Add track to history
 function addToHistory(trackData) {
-  const { song, artist, album, albumArt, app, duration, user, genre, year, label } = trackData;
+  const { song, artist, album, albumArt, app, duration, user, genre, year, label, artistImage } = trackData;
   
   if (!song || !artist) return;
   
@@ -77,7 +77,8 @@ function addToHistory(trackData) {
     // Extended metadata from Gemini AI
     genre: genre || null,
     year: year || null,
-    label: label || null
+    label: label || null,
+    artistImage: ensureHttps(artistImage) || null
   });
   
   // Trim to max size
@@ -259,7 +260,8 @@ app.post("/session", (req, res) => {
     label: label || null,
     trackCount: trackCount || null,
     albumDescription: albumDescription || null,
-    artistBio: artistBio || null
+    artistBio: artistBio || null,
+    artistImage: ensureHttps(artistImage) || null
   };
 
   console.log(`✅ Session created: ${id} for ${app}`);
@@ -275,7 +277,7 @@ app.post("/session", (req, res) => {
     console.log(`   ${playing ? '▶️ Playing' : '⏸️ Paused'}`);
     
     // Add to history when session starts with a song (include user and extended metadata)
-    addToHistory({ song, artist, album, albumArt, app, duration, user, genre, year, label });
+    addToHistory({ song, artist, album, albumArt, app, duration, user, genre, year, label, artistImage });
   }
 
   res.json({ sessionId: id, url: `/s/${id}` });
@@ -302,11 +304,11 @@ app.put("/session/:id", (req, res) => {
   if (!session.active) {
     return res.status(410).json({ error: "Session has ended" });
   }
-
+  
   const { 
     song, artist, album, albumArt, playing, duration, position,
     // Extended metadata from Gemini AI
-    genre, year, label, trackCount, albumDescription, artistBio
+    genre, year, label, trackCount, albumDescription, artistBio, artistImage
   } = req.body;
 
   // Check if song changed
@@ -344,7 +346,8 @@ app.put("/session/:id", (req, res) => {
       user: session.user,
       genre: genre || session.genre,
       year: year || session.year,
-      label: label || session.label
+      label: label || session.label,
+      artistImage: artistImage || session.artistImage
     });
   }
 
@@ -362,6 +365,7 @@ app.put("/session/:id", (req, res) => {
   if (trackCount !== undefined) session.trackCount = trackCount;
   if (albumDescription !== undefined) session.albumDescription = albumDescription;
   if (artistBio !== undefined) session.artistBio = artistBio;
+  if (artistImage !== undefined) session.artistImage = ensureHttps(artistImage) || null;
 
   // Update playing state
   if (playing !== undefined && !songChanged) {

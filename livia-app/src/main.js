@@ -59,6 +59,7 @@ let lastLabel = null;
 let lastTrackCount = null;
 let lastAlbumDescription = null;
 let lastArtistBio = null;
+let lastArtistImage = null;
 
 // ============ Prevent Multiple Instances ============
 const gotTheLock = app.requestSingleInstanceLock();
@@ -550,6 +551,7 @@ async function startMainLoop() {
           lastTrackCount = albumInfo.trackCount || null;
           lastAlbumDescription = albumInfo.albumDescription || null;
           lastArtistBio = albumInfo.artistBio || null;
+          lastArtistImage = albumInfo.artistImage || null;
           
           console.log(`✨ Cleaned metadata: "${lastCleanedSong}" by "${lastCleanedArtist}"`);
           if (lastGenre || lastYear) {
@@ -650,7 +652,8 @@ async function createSession(media, isPlaying) {
         label: lastLabel,
         trackCount: lastTrackCount,
         albumDescription: lastAlbumDescription,
-        artistBio: lastArtistBio
+        artistBio: lastArtistBio,
+        artistImage: lastArtistImage
       })
     });
     
@@ -685,7 +688,8 @@ async function updateSession(media, isPlaying) {
         label: lastLabel,
         trackCount: lastTrackCount,
         albumDescription: lastAlbumDescription,
-        artistBio: lastArtistBio
+        artistBio: lastArtistBio,
+        artistImage: lastArtistImage
       })
     });
   } catch (error) {

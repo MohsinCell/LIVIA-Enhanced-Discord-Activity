@@ -130,9 +130,9 @@ Artist: "${artist}"
 ${album ? `Album: "${album}"` : ''}
 
 Return ONLY valid JSON (no markdown):
-{"song":"exact title","artist":"exact artist","album":"${album || 'album name'}","year":2024,"genre":"genre","label":"label","trackCount":12,"albumDescription":"A detailed paragraph about the album...","artistBio":"A detailed paragraph about the artist..."}
+{"song":"exact title","artist":"exact artist","album":"${album || 'album name'}","year":2024,"genre":"genre","label":"label","trackCount":12,"albumDescription":"A detailed paragraph about the album...","artistBio":"A detailed paragraph about the artist...","artistImage":"https://example.com/artist.jpg"}
 
-IMPORTANT: albumDescription should be a rich, detailed paragraph (5-6 sentences) covering the album's themes, sound, critical reception, and significance. artistBio should be a rich, detailed paragraph (5-6 sentences) covering the artist's background, career highlights, musical style, and influence. Do NOT write short one-liners.`;
+IMPORTANT: albumDescription should be a rich, detailed paragraph (5-6 sentences) covering the album's themes, sound, critical reception, and significance. artistBio should be a rich, detailed paragraph (5-6 sentences) covering the artist's background, career highlights, musical style, and influence. Do NOT write short one-liners. artistImage should be a direct URL to a photo of the artist (from Wikipedia, official site, or a reliable source). If you cannot find a reliable image URL, use null.
 
     try {
       const response = await fetch(`${GEMINI_API_URL}?key=${this.geminiApiKey}`, {
@@ -176,7 +176,8 @@ IMPORTANT: albumDescription should be a rich, detailed paragraph (5-6 sentences)
         label: parsed.label || null,
         trackCount: parsed.trackCount || null,
         albumDescription: parsed.albumDescription || null,
-        artistBio: parsed.artistBio || null
+        artistBio: parsed.artistBio || null,
+        artistImage: parsed.artistImage || null
       };
 
       this.metadataCache.set(cacheKey, result);
