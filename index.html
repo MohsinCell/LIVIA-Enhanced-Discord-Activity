@@ -3431,6 +3431,12 @@
       });
     }
 
+    function ensureHttps(url) {
+      if (!url) return url;
+      // Convert HTTP to HTTPS for external image sources
+      return url.replace(/^http:\/\//, 'https://');
+    }
+
     function escapeHtml(text) {
       const div = document.createElement("div");
       div.textContent = text;
@@ -3982,6 +3988,8 @@
               // Filter out default/placeholder images
               if (lastfmImage && (lastfmImage.includes('2a96cbd8b46e442fc41c2b86b821562f') || !lastfmImage)) {
                 lastfmImage = null;
+              } else if (lastfmImage) {
+                console.log(`✅ Last.fm artist image found`);
               }
             }
 
@@ -5260,7 +5268,7 @@
             addToRecentlyPlayed(
               data.currentSong,
               data.currentArtist || "Unknown Artist",
-              data.albumArt || "",
+              ensureHttps(data.albumArt) || "",
               data.album || ""
             );
 
@@ -5272,7 +5280,7 @@
               fetchAlbumContext(
                 data.album,
                 data.currentArtist || "",
-                data.albumArt || "",
+                ensureHttps(data.albumArt) || "",
                 {
                   genre: data.genre,
                   year: data.year,
@@ -5348,10 +5356,10 @@
               : `Last used ${data.app}`;
 
         // Update artwork with smooth crossfade (preloads in background)
-        if (data.albumArt && data.albumArt !== artworkManager.currentUrl) {
-          artworkManager.update(data.albumArt, () => {
+        if (data.albumArt && ensureHttps(data.albumArt) !== artworkManager.currentUrl) {
+          artworkManager.update(ensureHttps(data.albumArt), () => {
             // Callback when image is loaded and visible
-            applyAlbumGradient(data.albumArt);
+            applyAlbumGradient(ensureHttps(data.albumArt));
 
             // If this is initial load and we have song data, transition now
             if (isInitialLoad && data.currentSong) {
