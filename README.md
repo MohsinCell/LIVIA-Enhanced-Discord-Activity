@@ -21,23 +21,6 @@ Show what you're listening to on Discord — with real-time lyrics, album art, t
 
 ---
 
-## Architecture
-
-```
-┌────────────────┐       ┌────────────────┐       ┌────────────────┐
-│  livia-windows │──────▶│  livia-backend │◀──────│   livia-app    │
-│   C# / .NET 8  │  HTTP │  Express.js    │  HTTP │   Electron     │
-│                │       │                │       │                │
-│ Reads SMTC and │       │ REST API that  │       │ Connects to    │
-│ sends track    │       │ stores sessions│       │ Discord RPC,   │
-│ data to the    │       │ and serves the │       │ fetches album  │
-│ backend        │       │ companion page │       │ art, manages   │
-│                │       │                │       │ rich presence   │
-└────────────────┘       └────────────────┘       └────────────────┘
-     Windows                  Server                  Desktop
-     System Tray              (Docker)                (Electron)
-```
-
 | Component | Description | Tech |
 |-----------|-------------|------|
 | **livia-app** | Desktop client that manages Discord Rich Presence and media detection | Electron 28, discord-rpc, electron-store |
